@@ -1,0 +1,31 @@
+Filename: /home/carana/PycharmProjects/test/memory_test.py
+
+Line #    Mem usage    Increment   Line Contents
+================================================
+     7     13.3 MiB      0.0 MiB   @profile(stream=fp)
+     8                             def function():
+     9     22.6 MiB      9.3 MiB       x = list(range(300000))  # allocate a big list
+    10     22.6 MiB      0.0 MiB       print(gc.get_count())
+    11     38.4 MiB     15.8 MiB       y = copy.deepcopy(x)
+    12     38.4 MiB      0.0 MiB       print(gc.get_count())
+    13                              #   while x:
+    14                              #       x.pop(0)
+    15                              #   del x
+    16     36.1 MiB     -2.3 MiB       del x[:]
+    17     36.1 MiB      0.0 MiB       print(gc.get_count())
+    18     36.1 MiB      0.0 MiB       gc.collect()
+    19     36.1 MiB      0.0 MiB       print(gc.get_count())
+    20                             
+    21     36.1 MiB      0.0 MiB       z = list(range(200000))  # allocate a big list
+    22     57.6 MiB     21.5 MiB       a = copy.deepcopy(z)
+    23     57.6 MiB      0.0 MiB       del z[:]
+    24                             
+    25                             
+    26     57.6 MiB      0.0 MiB       b = list(range(200000))  # allocate a big list
+    27     57.6 MiB      0.0 MiB       c = copy.deepcopy(z)
+    28     57.6 MiB      0.0 MiB       del b[:]
+    29     57.6 MiB      0.0 MiB       gc.collect()
+    30                             
+    31     57.6 MiB      0.0 MiB       return y
+
+

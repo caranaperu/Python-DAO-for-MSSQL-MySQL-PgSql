@@ -1,0 +1,153 @@
+my_string = "%i + %i = %i" % (1,2,3)
+string_two = "my homework!"
+string_3 = my_string+string_two
+print(my_string)
+print(string_3)
+
+float_string3 = "%.2f" % (1.237)
+print(float_string3)
+print("%(x)i + %(y)i = %(z)i" % {"x":1, "y":2,"z":5})
+
+for number in range(5):
+       print(number)
+
+for number in [0, 1, 2, 3, 4]:
+    print(number)
+print("\n\n")
+
+
+a_dict = {"one": 1, "two": 2, "three": 3}
+for key in a_dict:
+        print(key)
+print("\n\n")
+
+a_dict = {1:"one", 2:"two", 3:"three"}
+keys = a_dict.keys()
+keys = sorted(keys)
+print(keys)
+for key in keys:
+    print(key)
+print("\n\n")
+
+
+my_list = [1, 2, 3, 4, 5]
+
+for i in my_list:
+    if i == 3:
+        print("Item found!")
+        break
+    print(i)
+else:
+    print("Item not found!")
+
+
+try:
+        1 / 0
+except Exception:
+    print("You cannot divide by zero!")
+print("\n\n")
+
+
+
+try:
+    handle = open("/home/carana/Derco/alessandra_Paso_02.sql", "r")
+    data = handle.read()
+    print(data)
+    handle.close()
+except:
+    print ('Error')
+
+print("\n\n")
+print("================\n\n")
+print("Nueva Lectura\n\n")
+
+try:
+    handle = open("/home/carana/Derco/alessandra_Paso_02.sql", "r")
+    data = handle.readline()
+    print(data)
+except:
+    print ('Error')
+finally:
+    print ('Cerrando')
+    handle.close()
+
+
+print("\n\n")
+print("================\n\n")
+print("Nueva Lectura\n\n")
+
+handle = None
+try:
+    handle = open("/home/carana/Derco/alessandra_Paso_023.sql", "r")
+    while True:
+        data = handle.read(1024)
+        print(data)
+        if not data:
+            break
+except Exception as e:
+    print("Error leyendo "+e.strerror)
+finally:
+    print ('Cerrando')
+    if handle != None:
+        handle.close()
+
+print("\n\n")
+print("================\n\n")
+print("Nueva Lectura\n\n")
+try:
+    with open("/home/carana/Derco/alessandra_Paso_02.sql") as file_handler:
+        for line in file_handler:
+            print(line)
+except Exception as e:
+    print("Error leyendo "+e.strerror)
+
+
+print("\n\n")
+print("================\n\n")
+def add(a, b):
+    return a + b
+
+valor = add(5,1)
+print(valor)
+print(type(valor))
+
+print("\n\n")
+print("================\n\n")
+print(dir("Soy un string"))
+
+
+print("\n\n")
+print("================\n\n")
+import csv
+
+def csv_reader(file_obj):
+    """
+    Read a csv file
+    """
+    reader = csv.reader(file_obj)
+    for row in reader:
+        print(" ".join(row))
+
+if __name__ == "__main__":
+    csv_path = "/home/carana/Derco/veritrade_autos_06_2017_final.csv"
+    with open(csv_path, "r") as f_obj:
+        csv_reader(f_obj)
+
+
+
+
+print("\n\n")
+print("================\n\n")
+import csv
+
+def csv_dict_reader(file_obj):
+    """
+    Read a CSV file using csv.DictReader
+    """
+    reader = csv.DictReader(file_obj, fieldnames={"comment","data1","data2"},delimiter=',')
+    for line in reader:
+        print(line["data1"],line["data2"]),
+
+if __name__ == "__main__":
+    with open("/home/carana/Derco/veritrade_autos_06_2017_final.csv") as f_obj:
+        csv_dict_reader(f_obj)

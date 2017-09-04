@@ -1,0 +1,5 @@
+[
+  {
+    "SqlContent": "-- =============================================\r\n-- Author:\t\t<Author,,Name>\r\n-- Create date: <Create Date,,>\r\n-- Description:\t<Description,,>\r\n-- =============================================\r\nCREATE TRIGGER [dbo].[tr_test]\r\n   ON  [dbo].[tb_factura4]   \r\nAFTER INSERT\r\nAS \r\nBEGIN\r\n\t-- SET NOCOUNT ON added to prevent extra result sets from\r\n\t-- interfering with SELECT statements.\r\n\tSET NOCOUNT ON;\r\n\r\n    -- Insert statements for trigger here\r\n\t--insert into tb_factura(factura_fecha) values(getdate());\t\r\n\t--insert into tb_factura4 (factura_id,factura_fecha,name,tb_factura_item_id) values(6666,'2016-01-01','test6666',2)\r\nEND\r\n"
+  }
+]

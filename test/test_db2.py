@@ -6,7 +6,6 @@ def direct_call_id(cur):
     return lastrowid
 
 from DbDriverFactory import DbDriverFactory
-#import pymssql
 
 fid = 2297
 fname=2297
@@ -30,6 +29,8 @@ try:
     if type == "directcall":
         cur.execute("insert into tb_factura4(factura_id,factura_fecha,name,tb_factura_item_id) values ({},'{}','{}',{})".format(fid,'2017-01-01',fname,2))
     elif type == "directsp":
+        # No existe posibilidad para hacer esto , en todo caso crear un sp envolvente que recoga
+        # el id.
         raise Exception('No soportado..')
     elif type == "call_with_select_id":
         cur.execute("set nocount on;EXEC uspaddFactura4 {},'{}';".format(fid,fname))
