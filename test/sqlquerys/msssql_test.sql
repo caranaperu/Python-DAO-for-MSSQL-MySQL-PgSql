@@ -29,8 +29,9 @@ ALTER PROCEDURE [dbo].[uspaddFactura4]
     set @factura_id = @factura_id+100
     set @name = replace(@name,' ','')  + 's'
     insert into tb_factura4(factura_id,factura_fecha,name,tb_factura_item_id) values (@factura_id,GETDATE(),@name,2);
-    select  * from tb_factura4;
+	-- DEBE ESTAR PRIMERO !!!!!
     select @id
+    select  * from tb_factura4;
 
 
 
