@@ -4,6 +4,7 @@ from enum import Enum
 from BaseModel import BaseModel
 from DAOErrorConstants import DAOErrorConstants
 from DAOConstraints import DAOConstraints
+from typing import Any
 
 
 class DAOOperations(object):
@@ -23,8 +24,10 @@ class DAOOperations(object):
                 INSERT INTO table(f1,f2,...) values(v1,v2,....)
         """
         DIRECT_CALL = 0
-        SP_CALL = 1
-        DIRECT_WITH_RETURNING = 2
+        DIRECT_SP = 1
+        SP_WITH_SELECT_ID = 2
+        SP_WITH_RETURN_ID = 3
+        SP_WITH_OUTPUT_ID = 4
 
     @abstractmethod
     def read_record(self, key_value, record_model, c_constraints=None, sub_operation=None):
@@ -37,13 +40,18 @@ class DAOOperations(object):
         pass
 
     @abstractmethod
-    def add_record(self, record_model, query_type=QueryType.DIRECT_CALL, c_constraints=None, sub_operation=None):
-        # type: (BaseModel,QueryType,DAOConstraints,str) -> DAOErrorConstants
+    def add_record(self, record_model, query_type=QueryType.DIRECT_CALL, c_constraints=None, sub_operation=None, rereadRecord=True):
+        # type: (BaseModel,QueryType,DAOConstraints,str, bool) -> DAOErrorConstants
         pass
 
     @abstractmethod
     def update_record(self, record_model, sub_operation=None):
         # type: (BaseModel,str) -> DAOErrorConstants
+        pass
+
+    @abstractmethod
+    def get_UID(self, cursor, query_type):
+        # type: (Cursor,QueryType) -> int
         pass
 
     """
@@ -78,22 +86,3 @@ class DAOOperations(object):
     def is_foreign_key_error(self, error_msg):
         # type: (str) -> bool
         pass
-
-    def get_last_rowid(self):
-        return None
-
-
-if __name__ == "__main__":
-    class DAOOperations2(DAOOperations):
-
-        def read_record(self, key_value, record_model, c_constraints=None, sub_operation=None):
-            # type: (BaseModel,str) -> DAOErrorConstants
-            return DAOErrorConstants.DB_ERR_ALLOK
-
-    # Esto enviara un error ya que no puede instanciarse una clase que es
-    # abstracta. Tambiewn indicara que el primer parametro a read record es invalido
-    bmodel = BaseModel()
-    do_oper = DAOOperations()
-    answer = do_oper.read_record(bmodel, "rrr", None)
-
-    answer = do_oper.read_record("bmodel", "rrr", None)

@@ -7,10 +7,7 @@ from DAOErrorConstants import DAOErrorConstants
 from DAOOperations import DAOOperations
 from TransactionManager import TransactionManager
 
-from datetime import date
-
 class DAOBase(DAOOperations):
-
     """Clase abstracta que define la implementacion base de las operaciones del DAO."""
     __metaclass__ = ABCMeta
 
@@ -91,8 +88,8 @@ class DAOBase(DAOOperations):
         # type: (Any,int,bool) -> DAOErrorConstants
         return DAOErrorConstants.DB_ERR_CANTEXECUTE
 
-    def add_record(self, record_model, query_type=DAOOperations.QueryType.DIRECT_CALL, c_constraints=None, sub_operation=None):
-        # type: (BaseModel,QueryType,DAOConstraints,str) -> DAOErrorConstants
+    def add_record(self, record_model, query_type=DAOOperations.QueryType.DIRECT_CALL, c_constraints=None, sub_operation=None, rereadRecord=True):
+        # type: (BaseModel,QueryType,DAOConstraints,str, bool) -> DAOErrorConstants
         try:
             self.__trx_mgr.start_transaction()
         except Exception as ex:
@@ -109,43 +106,17 @@ class DAOBase(DAOOperations):
             cursor = self.__trx_mgr.get_transaction_cursor()
             # add record
             cursor.execute(sql)
-          #  out = cursor.callproc("uspaddFactura4",(record_model.factura_id,record_model.name));
-          #  print(out)
-
             print(cursor.rowcount)
             print(cursor.lastrowid)
 
-
-            unique_id = None
-            if query_type == DAOOperations.QueryType.DIRECT_CALL:
-                if cursor.rowcount <= 0:
-                    ret_value = DAOErrorConstants.DB_ERR_CANTEXECUTE
+            if rereadRecord:
+                if not record_model.is_UID_pk():
+                    pk_keys = record_model.get_pk_fields()
                 else:
-                    unique_id = record_model.get_unique_id()
-                    print("El unique id es = {}".format(unique_id))
-                    if not unique_id:
-                        if record_model.is_pk_identity():
-                            print("Es PK")
-                            """
-                            IMPORTANTE:
-                                - Para mysql LAST_INSERT_ID garantiza que sera del primer insert en la transaccion
-                                    independiente del numero de inserts que se hagan en la misma transaccion.
-                            """
-                            unique_id = cursor.lastrowid
-                            print("PK id  es = {}".format(unique_id))
-            elif query_type == DAOOperations.QueryType.SP_CALL:
-                unique_id = record_model.get_unique_id()
-                print("El unique id en sp_call es = {}".format(unique_id))
-                if not unique_id:
-                    print("Verificando rows")
-                    rows = cursor.fetchone()
-                    if rows:
-                        unique_id = rows[0]
-                        print(rows[0])
+                    pk_keys = self.get_UID(cursor, query_type)
 
-            if unique_id:
                 ret_value = self.read_record(
-                    unique_id, record_model, c_constraints, sub_operation)
+                    pk_keys, record_model, c_constraints, sub_operation)
             else:
                 ret_value = DAOErrorConstants.DB_ERR_ALLOK
         except Exception as ex:

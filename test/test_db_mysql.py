@@ -1,15 +1,16 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 def direct_call_id(cur):
-    ### MSSQL SERVER ODBC METODO - CON EXECUTE DIRECTO
     cur.execute("SELECT last_insert_id();")
     lastrowid = cur.fetchone()[0]
-    #print("lastrowid = {}".format(lastrowid))
     return lastrowid
 
 from DbDriverFactory import DbDriverFactory
 #import pymssql
 
-fid = 2294
-fname=2294
+fname='Test'
 
 #type = "directcall"
 #type = "directsp"
@@ -21,24 +22,26 @@ result = None
 
 xx = DbDriverFactory.get_db_driver('mysql')
 
-conn = xx.connect(host='localhost', user='root',password='melivane', database='test')
+conn = xx.connect(host='localhost', user='root',password='melivane', database='py_dbtest')
 cur = conn.cursor()
 try:
     if type == "directcall":
         cur.execute("insert into tb_maintable(anytext) values ('{}')".format(fname))
     elif type == "directsp":
-        cur.callproc("addToMaintableWithoutReturn", [fname])
+        cur.callproc("directspInsertTest", [fname])
     elif type == "call_with_select_id":
-        cur.callproc("addToMainTableWithSelectReturn",[fname])
+        cur.callproc("withSelectspInsertTest",[fname])
         #cur.execute("call addToMainTableWithSelectReturn('{}');".format(fname))
     elif type == "call_with_return_id":
-        cur.execute("select addToMainTableWithReturn('{}')".format(fname))
+        cur.execute("select withReturnspInsertTest('{}')".format(fname))
     elif type == "call_with_output_param_id":
-        cur.callproc("addToMainTableWithOutParam",[fid,0])
+        cur.callproc("withOutParamInsertTest",[fname,0])
         #results = cur.execute("call addToMainTableWithOutParam('{}',@newid);select @newid;".format(fname),multi=True)
     #if cur.rowcount >= 0:
     if type == "directcall":
-        # Es independiente del trigger
+        # Es independiente del trigger, mas aun cuando aqui el trigger no puede insertar a la misma
+        # tabla (Limitacion MySQL) , Para pruebas crear un trigger con un id autoincrement en otra
+        # tabla.
         lastrowid = cur.lastrowid
         print(lastrowid)
     elif type == "directsp":
@@ -49,7 +52,12 @@ try:
         # En el caso se agrege a otras tablas debera usarse otro type mas adecuado, la idea aqui es que solo se agregue
         # a la tabla de interes en el sp.
         #
-        print(direct_call_id(cur))
+        # El last insert id no toma en cuenta lo que suceda dentro de un trigger.
+        #
+        # En este caso lastrowid del cursor no retorna un valor valido.
+        cur.execute("SELECT last_insert_id();")
+        lastrowid = cur.fetchone()[0]
+        print(lastrowid)
     elif type == "call_with_select_id":
         # El select que contiene el id debera ser el ultimo existente en el stored procedure de lo contrario
         # fallara, si no fuera asi y no se tiene acceso al sp puede crearse uno que envuelva
@@ -57,26 +65,24 @@ try:
         # debera ser la ultima en ser insertada.
         # No se ve afectada por triggers.
         # Solo puede accesarse usando stored_results el cual es una extension pymysql de otra manera no funciona
-        # correctamente.
+        # correctamente. (Esto para el caso que existen otros selects previos al ultimo)
         for result in cur.stored_results():
             lastrowid = result.fetchone()[0]
         print("lastrowid = {}".format(lastrowid))
     elif type == "call_with_return_id":
-        # Es irrelevante si existen selects antes que el return , siempre se recogera
-        # como id el ultimo resultado.
-        # Esto solo puede ser realizado por una funcion no un sp en mysql, ya que los sp no
-        # soportan retornar un valor.
+        # En mysql para retornar un valor via return y no select , solo es valido via una funcion,
+        # asi mismo estas no soportan resultados de resultset , por ende aqui el resultado directo
+        # es todo lo que se necesita.
         # No se ve afectada por triggers.
         lastrowid = cur.fetchone()[0]
-        while cur.nextset():
-            lastrowid = cur.fetchone()[0]
         print("lastrowid = {}".format(lastrowid))
     elif type == "call_with_output_param_id":
         # En la interfase python de mysql no existe una manera standard de recoger los output params
         # pero la documentacion indica que los parametros pueden ser accesados como "@_spname_argn"
-        # por ende se requiere un select para recoger el valor deseado.
+        # por ende se requiere un select para recoger el valor deseado y conocer su posicion en el
+        # call.
         #
-        cur.execute("select @_addToMainTableWithOutParam_arg2")
+        cur.execute("select @_withOutParamInsertTest_arg2")
         print(cur.fetchone()[0])
 
     conn.commit()

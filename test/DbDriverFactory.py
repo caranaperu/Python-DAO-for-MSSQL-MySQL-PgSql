@@ -30,3 +30,15 @@ class DbDriverFactory(object):
                 import pyodbc
                 return pyodbc
         return None
+
+    @staticmethod
+    def driver_is_odbc(driver_id):
+        # type: (str) -> bool
+        driver = [drv for drv in DbDriverFactory.__supported_drivers if driver_id in drv]
+
+        if (not driver):
+            raise ValueError('db driver {} not supported'.format(driver_id))
+
+        if (driver_id == 'mssqlpypy' or driver_id == 'mssqlpy'):
+            return True
+        return False

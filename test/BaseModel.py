@@ -65,11 +65,11 @@ class BaseModel(object):
             raise TypeError('record parameter need to be a dictionary of column names and values')
 
     @abstractmethod
-    def get_unique_id(self):
+    def get_pk_fields(self):
         # type: () -> Any
         pass
 
-    def is_pk_identity(self):
+    def is_UID_pk(self):
         # type: () -> bool
         return False
 

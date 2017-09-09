@@ -7,14 +7,13 @@ def direct_call_id(cur):
 
 from DbDriverFactory import DbDriverFactory
 
-fid = 2297
 fname=2297
 
 #type = "directcall"
-type = "directsp"
+#type = "directsp"
 #type = "call_with_select_id"
 #type = "call_with_return_id"
-#type = "call_with_output_param_id"
+type = "call_with_output_param_id"
 
 result = None
 
@@ -28,14 +27,12 @@ try:
         cur.execute("insert into tb_maintable(id_key,anytext) values (DEFAULT,'{}') returning id_key".format(fname))
     elif type == "directsp":
         cur.execute("select directspInsertTest('{}');".format(fname))
-
     elif type == "call_with_select_id":
-        cur.execute("set nocount on;EXEC uspaddFactura4 {},'{}';".format(fid,fname))
+        cur.execute("select withSelectspInsertTest('{}');".format(fname))
     elif type == "call_with_return_id":
-        cur.execute("set nocount on;declare @id int;EXEC @id = uspaddFactura5 {},'{}';select @id;".format(fid,fname))
+        cur.execute("select withReturnspInsertTest('{}');".format(fname))
     elif type == "call_with_output_param_id":
-        cur.execute("set nocount on;declare @id int;declare @pp varchar(10);EXEC uspaddFactura6 {},'{}',@id output,@pp output;select @pp;select @id;".format(fid,fname))
-
+        cur.execute("select * from withOutParamInsertTest('{}');".format(fname))
     if cur.description:
         field_names = [i[0] for i in cur.description]
         print(field_names)
@@ -59,48 +56,29 @@ try:
         # Asi mismo no funcionara si en un trigger que se dispare por un after insert agrega
         # otro registro a la misma tabla , ya que el id retornado sera el del ultimo agregado.
         #
-        # Dado que CURRVAL dara el ultimo id agregado a esa tabla si se cumplen las condiciones
-        # indicadas arriba , el resultado sera el correcto.
+        # CURRVAL dara el ultimo id agregado a esa tabla independientemente de cual sea el origen
+        # del insert el sp o un trigger after insert.
         cur.execute("SELECT CURRVAL(pg_get_serial_sequence('tb_maintable','id_key'))")
         lastrowid = cur.fetchone()[0]
         print("lastrowid = {}".format(lastrowid))
     elif type == "call_with_select_id":
-        # El select que contiene el id debera estar antes que cualquier otro select existente en el
-        # stored procedure , si no fuera asi y no se tiene acceso al sp puede crearse uno que envuelva
-        # al primero y efectue los select en dicho orden.
-        # No se ve afectada por triggers ya que el id es recogido programaticamente y seleccionado
-        # para ser recogido , por ende el orden posterior al insert es irrelevante.
-        # Los sp no pueden tener el set count off !!!!
+        # En este caso no se ve afectada por triggers ya que el id es recogido programaticamente
+        # y seleccionado para ser recogido , por ende el orden posteriorde otras sentencias al insert
+        # es irrelevante.
         lastrowid = cur.fetchone()[0]
         print("lastrowid = {}".format(lastrowid))
     elif type == "call_with_return_id":
-        # Es irrelevante si existen selects antes que el return , siempre se recogera
-        # como id el ultimo resultado.
-        # No se ve afectada por triggers ya que el id es recogido programaticamente y seleccionado
-        # para ser recogido , por ende el orden posterior al insert es irrelevante.
-        # Los sp no pueden tener el set count off !!!!
-        #lastrowid = cur.fetchone()[0]
+        # En este caso no se ve afectada por triggers ya que el id es recogido programaticamente
+        # y seleccionado para ser recogido , por ende el orden posterior al insert es irrelevante.
         lastrowid = cur.fetchone()[0]
-        while cur.nextset():
-            lastrowid = cur.fetchone()[0]
         print("lastrowid = {}".format(lastrowid))
     elif type == "call_with_output_param_id":
-        # EL controlador pyodbc o pypyodbc no soportan output parameters , por ende se tiene que simular
-        # y el mayor problema es que si el stored procedure a la vez retorna algun select al menos
-        # estos resultados vendran primero y al final el output parameter sera recogido , por ende
-        # se recorreran todos los resultados y el ultimo encontrado sera el id.
-        # Para que esto funcione el stored procedure sera modificado antes de ejecutarse a la siguiente
-        # manera:
-        #   set nocount on;declare @out_param int;EXEC my_sp_with_out_params param1,param2,param...,@out_param output;select @out_param
-        # En el caso que existan mas de un output parameter , EL ULTIMO EN SER RECOGIDO debe ser el UNIQUE ID.
-        #
-        # Los sp no pueden tener el set count off !!!!
+        # En este caso los output parameters son retornados como un solo registro en el orden declarado
+        # se requerira saber cual es el que representa el idenity.
+        # Dado que es programatico es irrelevante si hay trigger o selects previos , etc.
         #
         lastrowid = cur.fetchone()[0]
-        while cur.nextset():
-            lastrowid = cur.fetchone()[0]
         print("lastrowid = {}".format(lastrowid))
-
     conn.commit()
 except Exception as ex:
     print(str(ex))
