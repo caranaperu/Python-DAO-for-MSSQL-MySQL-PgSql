@@ -52,3 +52,4 @@
 2017-08-29 05:02:42,252:DEBUG:Error adding record , ya existe un registro con la misma llave,sql = 'insert into tb_atletas(id_atletas,tb_atletas_nombres,id_referenced) values (117,'Soy usuario de test 117',1)'
 2017-08-29 05:02:42,273:DEBUG:Error adding record , ya existe un registro con la misma llave,sql = 'EXEC uspaddFactura4 362,'car362''
 2017-08-29 05:02:56,812:DEBUG:Error adding record , ya existe un registro con la misma llave,sql = 'insert into tb_atletas(id_atletas,tb_atletas_nombres,id_referenced) values (117,'Soy usuario de test 117',1)'
+2017-09-09 16:39:12,771:DEBUG:Error adding record , exception message 'MainTableModel' object has no attribute 'factura_id' , sql ='None'

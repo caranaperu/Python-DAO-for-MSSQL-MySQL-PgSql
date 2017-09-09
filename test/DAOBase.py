@@ -39,6 +39,7 @@ class DAOBase(DAOOperations):
             return DAOErrorConstants.DB_ERR_SERVERNOTFOUND
 
         ret_value = None
+        sql = None
 
         try:
             sql = self.get_read_record_query(
@@ -98,6 +99,7 @@ class DAOBase(DAOOperations):
             return DAOErrorConstants.DB_ERR_SERVERNOTFOUND
 
         ret_value = None
+        sql = None
         try:
             sql = self.get_add_record_query(
                 record_model, c_constraints, sub_operation)
@@ -106,8 +108,8 @@ class DAOBase(DAOOperations):
             cursor = self.__trx_mgr.get_transaction_cursor()
             # add record
             cursor.execute(sql)
-            print(cursor.rowcount)
-            print(cursor.lastrowid)
+            print("Row Count = {}".format(cursor.rowcount))
+            print("Last Row Id = {}".format(cursor.lastrowid))
 
             if rereadRecord:
                 if not record_model.is_UID_pk():
