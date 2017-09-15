@@ -43,7 +43,8 @@ class TransactionManager(object):
                         port=self.__db_params['port'],
                         database=self.__db_params['database'],
                         user=self.__db_params['user'],
-                        password=self.__db_params['password'])
+                        password=self.__db_params['password']
+                    )
             except Exception as ex:
                 print(ex)
                 raise TransactionManagerException(
@@ -80,10 +81,18 @@ class TransactionManager(object):
         else:
             return self.__cursor
 
+    def encoding(self):
+        return DbDriverFactory.driver_encoding(self.__db_driver_id)
+
     @property
     def db_driver(self):
         # type: () -> object
         return self.__db_driver
+
+    @property
+    def db_driver_id(self):
+        # type: () -> str
+        return self.__db_driver_id
 
 
 if __name__ == "__main__":

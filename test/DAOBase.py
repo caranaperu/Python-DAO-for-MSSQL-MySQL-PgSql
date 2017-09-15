@@ -23,6 +23,13 @@ class DAOBase(DAOOperations):
             raise ValueError(
                 'trx_mgr parameter need to be an instance of TransactionManager')
 
+    def get_column_names(self,cursor, table_name):
+        with cursor:
+            cursor.execute("SELECT * FROM " + table_name)
+            column_names = [desc[0] for desc in cursor.description]
+            cursor.fetchall()
+        return column_names
+
     def read_record(self, key_value, record_model, c_constraints=None, sub_operation=None):
         # type: (Any,BaseModel,DAOConstraints,str) -> DAOErrorConstants
         """
@@ -42,14 +49,27 @@ class DAOBase(DAOOperations):
         sql = None
 
         try:
+
             sql = self.get_read_record_query(
                 key_value, c_constraints, sub_operation)
 
             # Open the transaction
             cursor = self.__trx_mgr.get_transaction_cursor()
+            #columns = self.get_column_names(cursor,'tb_maintable');
+            #for col in columns:
+            #    print(type(col))
+            #    #print(col)
+            #    print(col.encode('utf-16le'))
             # read record
             cursor.execute(sql)
             rows = cursor.fetchall()
+
+            """  Usamos este metodo en este caso ya que algunos drivers no devuelven el
+                 numero de filas afectadas en forma correcta.
+            """
+            rowcount = -1
+            if rows:
+                rowcount = len(rows)
 
             """
             Dado que este metodo debe leer un solo registro , si el numero de respuestas
@@ -57,13 +77,26 @@ class DAOBase(DAOOperations):
             Si el numero de registros es cero se entiende que no existe.
             Si el numero de registros es de mas de 1 se entiende que el query es incorrecto
             """
-            if (cursor.rowcount == 1):
+            if (rowcount == 1):
                 columns = [i[0] for i in cursor.description]
+                for col in columns:
+                    print(col)
+
+                encodetype = self.__trx_mgr.encoding()
+                if encodetype:
+                    columns = [i[0].encode('utf-16le').rstrip('\x00') for i in cursor.description]
+                else:
+                    columns = [i[0] for i in cursor.description]
+
+                for col in columns:
+                    print(col)
+                #for col in columns:
+                #    print (format(col))
                 record = dict(zip(columns, rows[0]))
                 record_model.set_values(record)
 
                 ret_value = DAOErrorConstants.DB_ERR_ALLOK
-            elif (cursor.rowcount == 0):
+            elif (rowcount == 0):
                 ret_value = DAOErrorConstants.DB_ERR_RECORDNOTFOUND
             else:
                 logging.debug(
@@ -109,12 +142,17 @@ class DAOBase(DAOOperations):
             # add record
             cursor.execute(sql)
             print("Row Count = {}".format(cursor.rowcount))
-            print("Last Row Id = {}".format(cursor.lastrowid))
+
+            # No funciona com pymssal ya que parece alterar la posicion del cursor.
+            #if hasattr(cursor,'lastrowid'):
+            #    print("Last Row Id = {}".format(cursor.lastrowid))
 
             if rereadRecord:
                 if not record_model.is_UID_pk():
                     pk_keys = record_model.get_pk_fields()
                 else:
+                    #lastrowid = cursor.fetchone()[0]
+                    #print("lastrowid = {}".format(lastrowid))
                     pk_keys = self.get_UID(cursor, query_type)
 
                 ret_value = self.read_record(

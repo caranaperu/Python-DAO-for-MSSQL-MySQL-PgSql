@@ -11,15 +11,20 @@ fname='Test'
 
 #type = "directcall"
 #type = "directsp"
-#type = "call_with_select_id"
+type = "call_with_select_id"
 #type = "call_with_return_id"
-type = "call_with_output_param_id"
+#type = "call_with_output_param_id"
 
 result = None
 
-xx = DbDriverFactory.get_db_driver('mssqlpypy')
+driver = 'mssql'
+xx = DbDriverFactory.get_db_driver(driver)
 
-conn = xx.connect('DSN=MSSQLServer;SERVER=192.168.0.9;DATABASE=db_pytest;UID=sa;PWD=melivane;')
+if driver == 'mssql':
+    conn = xx.connect(host='192.168.0.9',port='1433',database='db_pytest',user='sa',password='melivane')
+else:
+    conn = xx.connect('DSN=MSSQLServer;SERVER=192.168.0.9;DATABASE=db_pytest;UID=sa;PWD=melivane;')
+
 cur = conn.cursor()
 try:
     if type == "directcall":

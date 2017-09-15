@@ -42,3 +42,11 @@ class DbDriverFactory(object):
         if (driver_id == 'mssqlpypy' or driver_id == 'mssqlpy'):
             return True
         return False
+
+    @staticmethod
+    def driver_encoding(driver_id):
+        # type: (str) -> str
+        if DbDriverFactory.driver_is_odbc(driver_id):
+            return DbDriverFactory.get_db_driver(driver_id).odbc_encoding
+        return None
+
