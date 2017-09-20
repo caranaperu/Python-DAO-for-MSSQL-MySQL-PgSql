@@ -22,9 +22,14 @@ CREATE TABLE [dbo].[tb_maintable_fk](
 	[pk_id] [int] IDENTITY(1,1) NOT NULL,
 	[anytext] [nvarchar](10) NOT NULL,
 	[fktest] [int] NOT NULL,
+	[nondup] [nvarchar](100) NULL,
  CONSTRAINT [PK_tb_maintable_fk] PRIMARY KEY CLUSTERED
 (
 	[pk_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY],
+ CONSTRAINT [IX_tb_maintable_fk] UNIQUE NONCLUSTERED
+(
+	[nondup] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
 ) ON [PRIMARY]
 
@@ -100,3 +105,4 @@ CREATE PROCEDURE [dbo].[withOutParamInsertTest]
 -- ---------------------------------------------------------------------------------------
 -- ---------------------------------------------------------------------------------------
 select * from tb_maintable;
+select * from tb_maintable_fk;

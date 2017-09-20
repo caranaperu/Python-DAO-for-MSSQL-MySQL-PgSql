@@ -13,10 +13,10 @@ from DbDriverFactory import DbDriverFactory
 fname='Test'
 
 #type = "directcall"
-#type = "directsp"
+type = "directsp"
 #type = "call_with_select_id"
 #type = "call_with_return_id"
-type = "call_with_output_param_id"
+#type = "call_with_output_param_id"
 
 result = None
 
@@ -29,6 +29,7 @@ try:
         cur.execute("insert into tb_maintable(anytext) values ('{}')".format(fname))
     elif type == "directsp":
         cur.callproc("directspInsertTest", [fname])
+        #cur.execute("call directspInsertTest(%s)",[fname],multi=True)
     elif type == "call_with_select_id":
         cur.callproc("withSelectspInsertTest",[fname])
         #cur.execute("call addToMainTableWithSelectReturn('{}');".format(fname))

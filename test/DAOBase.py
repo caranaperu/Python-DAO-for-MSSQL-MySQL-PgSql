@@ -1,4 +1,4 @@
-from abc import ABCMeta
+#from abc import ABCMeta
 import logging
 from typing import Any
 from BaseModel import BaseModel
@@ -6,22 +6,35 @@ from DAOConstraints import DAOConstraints
 from DAOErrorConstants import DAOErrorConstants
 from DAOOperations import DAOOperations
 from TransactionManager import TransactionManager
+from DAODelegate import DAODelegate
 
 class DAOBase(DAOOperations):
     """Clase abstracta que define la implementacion base de las operaciones del DAO."""
-    __metaclass__ = ABCMeta
+   # __metaclass__ = ABCMeta
 
-    def __init__(self, trx_mgr):
-        # type: (TransactionManager) -> None
+    def __init__(self, trx_mgr, dao_delegate):
+        # type: (TransactionManager, DAODelegate) -> None
         """Initialize  variables."""
 
         DAOOperations.__init__(self)
 
+        # Debe estar definido el transaction manager , verificamos que
+        # dicho parametro sea de la instancia correcta.
         if (isinstance(trx_mgr, TransactionManager)):
             self.__trx_mgr = trx_mgr  # type: TransactionManager
         else:
             raise ValueError(
                 'trx_mgr parameter need to be an instance of TransactionManager')
+
+        # El dao delegate es opcional , pero de estar definido debe ser del tipo
+        # DAODelegate.
+        ___dao_delegate = None
+        if dao_delegate:
+            if (isinstance(dao_delegate, DAODelegate)):
+                self.__dao_delegate = dao_delegate  # type: DAODelegate
+            else:
+                raise ValueError(
+                    'dao_delegate parameter need to be an instance of DAODelegate')
 
     def get_column_names(self,cursor, table_name):
         with cursor:
@@ -30,7 +43,7 @@ class DAOBase(DAOOperations):
             cursor.fetchall()
         return column_names
 
-    def read_record(self, key_value, record_model, c_constraints=None, sub_operation=None):
+    def read_record(self, key_values, record_model, c_constraints=None, sub_operation=None):
         # type: (Any,BaseModel,DAOConstraints,str) -> DAOErrorConstants
         """
         Metodo para la lectura especifica de un solo record basado en el key_value.
@@ -42,7 +55,7 @@ class DAOBase(DAOOperations):
             self.__trx_mgr.start_transaction()
         except Exception as ex:
             logging.debug("Error starting transaction reading record with key {} , exception message {} ".format(
-                key_value, str(ex)))
+                key_values, str(ex)))
             return DAOErrorConstants.DB_ERR_SERVERNOTFOUND
 
         ret_value = None
@@ -50,8 +63,8 @@ class DAOBase(DAOOperations):
 
         try:
 
-            sql = self.get_read_record_query(
-                key_value, c_constraints, sub_operation)
+            #sql = self.get_read_record_query(
+                #key_values, c_constraints, sub_operation)
 
             # Open the transaction
             cursor = self.__trx_mgr.get_transaction_cursor()
@@ -61,7 +74,7 @@ class DAOBase(DAOOperations):
             #    #print(col)
             #    print(col.encode('utf-16le'))
             # read record
-            cursor.execute(sql)
+            self.__dao_delegate.execute_read_SQL(cursor, record_model, key_values, c_constraints, sub_operation)
             rows = cursor.fetchall()
 
             """  Usamos este metodo en este caso ya que algunos drivers no devuelven el
@@ -84,7 +97,7 @@ class DAOBase(DAOOperations):
 
                 encodetype = self.__trx_mgr.encoding()
                 if encodetype:
-                    columns = [i[0].encode('utf-16le').rstrip('\x00') for i in cursor.description]
+                    columns = [i[0].encode(encodetype).rstrip('\x00') for i in cursor.description]
                 else:
                     columns = [i[0] for i in cursor.description]
 
@@ -104,7 +117,7 @@ class DAOBase(DAOOperations):
                 ret_value = DAOErrorConstants.DB_ERR_TOOMANYRESULTS
         except Exception as ex:
             logging.debug("Error reading record with key {} , exception message {}, sql = '{}'".format(
-                key_value, str(ex), sql))
+                key_values, str(ex), sql))
             ret_value = DAOErrorConstants.DB_ERR_CANTEXECUTE
         finally:
             """
@@ -134,13 +147,11 @@ class DAOBase(DAOOperations):
         ret_value = None
         sql = None
         try:
-            sql = self.get_add_record_query(
-                record_model, c_constraints, sub_operation)
-
             # Open the transaction
             cursor = self.__trx_mgr.get_transaction_cursor()
+
             # add record
-            cursor.execute(sql)
+            self.__dao_delegate.execute_add_SQL(cursor, record_model, c_constraints, sub_operation)
             print("Row Count = {}".format(cursor.rowcount))
 
             # No funciona com pymssal ya que parece alterar la posicion del cursor.
@@ -186,3 +197,14 @@ class DAOBase(DAOOperations):
     def update_record(self, record_model, sub_operation=None):
         # type: (BaseModel,str) -> DAOErrorConstants
         return DAOErrorConstants.DB_ERR_CANTEXECUTE
+
+    def get_UID(self, cursor, query_type):
+        return self.__dao_delegate.get_UID(cursor)
+
+    def is_duplicate_key_error(self, error_msg):
+        # type: (str) -> bool
+        return self.__dao_delegate.is_duplicate_key_error(error_msg)
+
+    def is_foreign_key_error(self, error_msg):
+        # type: (str) -> bool
+        return self.__dao_delegate.is_foreign_key_error(error_msg)

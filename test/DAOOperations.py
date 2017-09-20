@@ -58,15 +58,15 @@ class DAOOperations(object):
     Helpers para que cada DAO en forma especifica retorne el SQL query para cada
     operacion.
     """
-    @abstractmethod
+    #@abstractmethod
     def get_read_record_query(self, key_value, c_constraints=None, sub_operation=None):
         # type: (Any,DAOConstraints,str) -> str
-        pass
+        return ""
 
-    @abstractmethod
+    #@abstractmethod
     def get_add_record_query(self, record_model, c_constraints=None, sub_operation=None):
         # type: (BaseModel,DAOConstraints,str) -> str
-        pass
+        return ""
 
     """
     Helpers para que cada DAO en forma especifica indique si el error en una determianda
