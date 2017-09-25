@@ -2,7 +2,7 @@
 
 import mem_profile
 import time
-from DbDriverFactory import DbDriverFactory
+from DatabaseDriverFactory import DatabaseDriverFactory
 import logging
 
 logging.basicConfig(
@@ -12,7 +12,7 @@ logging.basicConfig(
     )
 
 #'''
-xx = DbDriverFactory.get_db_driver('mysql')
+xx = DatabaseDriverFactory.get_db_driver('mysql')
 
 memb = mem_profile.memory_usage_psutil()
 print ('Memory (Before): {}Mb'.format(memb))
@@ -48,7 +48,7 @@ print ('Diff {} mem'.format(memf - memb))
 print ('Diff {} mem'.format(1024 * (memf - memb)))
 print ('Took {} Seconds'.format(t2 - t1))
 #'''
-xx = DbDriverFactory.get_db_driver('pgsql')
+xx = DatabaseDriverFactory.get_db_driver('pgsql')
 memb = mem_profile.memory_usage_psutil()
 print ('Memory (Before): {}Mb'.format(memb))
 t1 = time.clock()
@@ -89,7 +89,7 @@ print ('Diff {} mem'.format(memf - memb))
 print ('Diff {} mem'.format(1024 * (memf - memb)))
 print ('Took {} Seconds'.format(t2 - t1))
 #'''
-xx = DbDriverFactory.get_db_driver('mssql')
+xx = DatabaseDriverFactory.get_db_driver('mssql')
 memb = mem_profile.memory_usage_psutil()
 print ('Memory (Before): {}Mb'.format(memb))
 t1 = time.clock()
@@ -148,14 +148,14 @@ finally:
     conn.close()
 
 
-from BaseModel import BaseModel
-from DAOBase import DAOBase
+from BaseModel import Model
+from DAOBase import DatabaseDAO
 from TransactionManager import TransactionManager
 
 
-class SqlTestModel(BaseModel):
+class SqlTestModel(Model):
     def __init__(self):
-        BaseModel.__init__(self)
+        Model.__init__(self)
         self.marca = None  # type: str
         self.modelo = None  # type: str
         self.version = None  # type: str
@@ -165,7 +165,7 @@ class SqlTestModel(BaseModel):
         return None
 
 
-class DAOBaseMSSQL(DAOBase):
+class DAOBaseMSSQL(DatabaseDAO):
     def get_read_record_query(self, key_value, c_constraints=None, sub_operation=None):
         # type: (Any,DAOConstraints,str) ->str
         return "select marca,modelo,version,fecha_dua from veritrade where CHASSISDATA ='JTFSS22P4H0158420' and ANO_NACIONALIZACION = 2017"
@@ -184,7 +184,7 @@ class DAOBaseMSSQL(DAOBase):
         # type: (str) -> bool
         return False
 
-class DAOBasePGSQL(DAOBase):
+class DAOBasePGSQL(DatabaseDAO):
     def get_read_record_query(self, key_value, c_constraints=None, sub_operation=None):
         # type: (Any,DAOConstraints,str) ->str
         return "select id,name,code,create_date from account_account where code ='103000'"
@@ -203,7 +203,7 @@ class DAOBasePGSQL(DAOBase):
         # type: (str) -> bool
         return False
 
-class DAOBaseMYSQL(DAOBase):
+class DAOBaseMYSQL(DatabaseDAO):
     def get_read_record_query(self, key_value, c_constraints=None, sub_operation=None):
         # type: (Any,DAOConstraints,str) ->str
         if isinstance(key_value,dict):
@@ -226,6 +226,12 @@ class DAOBaseMYSQL(DAOBase):
             return True
         return False
 
+    def get_column_names(self,cursor, table_name):
+        with cursor:
+            cursor.execute("SELECT * FROM " + table_name)
+            column_names = [desc[0] for desc in cursor.description]
+            cursor.fetchall()
+        return column_names
 
 testModel = SqlTestModel()
 
@@ -263,9 +269,9 @@ drv2 = trx.db_driver
 print(drv2)
 
 
-class PgSQLTestModel(BaseModel):
+class PgSQLTestModel(Model):
     def __init__(self):
-        BaseModel.__init__(self)
+        Model.__init__(self)
         self.id = None  # type: str
         self.name = None  # type: str
         self.code = None  # type: str
@@ -274,9 +280,9 @@ class PgSQLTestModel(BaseModel):
     def get_unique_id(self):
         return self.id
 
-class MySQLTestModel(BaseModel):
+class MySQLTestModel(Model):
     def __init__(self):
-        BaseModel.__init__(self)
+        Model.__init__(self)
         self.id_atletas = None  # type: int
         self.tb_atletas_nombres = None  # type: str
         self.id_referenced = None
@@ -330,7 +336,7 @@ print(test3Model.__dict__)
 print("==============================")
 
 # =======================================================================================================
-class DAOBaseMSSQL2(DAOBase):
+class DAOBaseMSSQL2(DatabaseDAO):
     def get_read_record_query(self, key_value, c_constraints=None, sub_operation=None):
         # type: (Any,DAOConstraints,str) ->str
         return "select factura_id,factura_fecha,xmin,autoi,tb_factura_item_id from tb_factura4 where autoi = {}".format(key_value)
@@ -352,9 +358,9 @@ class DAOBaseMSSQL2(DAOBase):
             return True
         return False
 
-class SqlTestModel2(BaseModel):
+class SqlTestModel2(Model):
     def __init__(self):
-        BaseModel.__init__(self)
+        Model.__init__(self)
         self.factura_id = None  # type: int
         self.factura_fecha = None  # type: date
         self.xmin = None  # type: Any

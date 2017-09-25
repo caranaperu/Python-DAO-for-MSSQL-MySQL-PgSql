@@ -5,7 +5,7 @@ def direct_call_id(cur):
     print("lastrowid = {}".format(lastrowid))
     return lastrowid
 
-from DbDriverFactory import DbDriverFactory
+from DatabaseDriverFactory import DatabaseDriverFactory
 
 fname=2297
 
@@ -17,7 +17,7 @@ type = "call_with_output_param_id"
 
 result = None
 
-xx = DbDriverFactory.get_db_driver('pgsql')
+xx = DatabaseDriverFactory.get_db_driver('pgsql')
 
 conn = xx.connect(host='192.168.0.5', user='postgres',
                   password='melivane', database='db_pytest')

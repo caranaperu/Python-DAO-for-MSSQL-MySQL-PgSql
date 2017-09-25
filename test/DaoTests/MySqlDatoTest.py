@@ -3,17 +3,17 @@ import sys
 sys.path.insert(0, '/home/carana/PycharmProjects/test')
 
 from TransactionManager import TransactionManager
-from DAOBase import DAOBase
+from DatabasePersistence import DatabasePersistence
 from DAOErrorConstants import DAOErrorConstants
 
 
-class MssqlDaoTest(DAOBase):
+class MssqlPersistenceTest(DatabasePersistence):
 
     def __init__(self, trx_mgr):
         # type: (TransactionManager) -> None
         """Initialize  variables."""
 
-        DAOBase.__init__(self, trx_mgr)
+        DatabasePersistence.__init__(self, trx_mgr)
         type_test = None
         withFK = False
 
@@ -27,18 +27,18 @@ class MssqlDaoTest(DAOBase):
     def get_add_record_query(self, record_model, c_constraints=None, sub_operation=None):
         # type: (Any,DAOConstraints,str) ->str
         # Insert directo
-        if self.type_test == DAOBase.QueryType.DIRECT_CALL:
+        if self.type_test == DatabasePersistence.QueryType.DIRECT_CALL:
             if not self.withFK:
                 return "insert into tb_maintable(anytext) values ('{}')".format(record_model.anytext)
             else:
                 return "insert into tb_maintable_fk(anytext,fktest,nondup) values ('{}',{},'{}')".format(record_model.anytext,record_model.fktest,record_model.nondup)
-        elif self.type_test == DAOBase.QueryType.DIRECT_SP:
+        elif self.type_test == DatabasePersistence.QueryType.DIRECT_SP:
             return "set nocount on;EXEC directspInsertTest '{}';".format(record_model.anytext)
-        elif self.type_test == DAOBase.QueryType.SP_WITH_SELECT_ID:
+        elif self.type_test == DatabasePersistence.QueryType.SP_WITH_SELECT_ID:
             return "set nocount on;EXEC withSelectspInsertTest '{}';".format(record_model.anytext)
-        elif self.type_test == DAOBase.QueryType.SP_WITH_RETURN_ID:
+        elif self.type_test == DatabasePersistence.QueryType.SP_WITH_RETURN_ID:
             return "set nocount on;declare @id int;EXEC @id = withReturnspInsertTest '{}';select @id;".format(record_model.anytext)
-        elif self.type_test == DAOBase.QueryType.SP_WITH_OUTPUT_ID:
+        elif self.type_test == DatabasePersistence.QueryType.SP_WITH_OUTPUT_ID:
             return "set nocount on;declare @id int;declare @pp varchar(10);EXEC withOutParamInsertTest '{}',@id output,@pp output;select @pp;select @id;".format(record_model.anytext)
 
     def get_UID(self, cursor, query_type):
@@ -105,7 +105,7 @@ class MssqlDaoTest(DAOBase):
         return False
 
 
-from BaseModel import BaseModel
+from BaseModel import Model
 import logging
 
 logging.basicConfig(
@@ -114,9 +114,9 @@ logging.basicConfig(
     format="%(asctime)s:%(levelname)s:%(message)s"
     )
 
-class MainTableModel(BaseModel):
+class MainTableModel(Model):
     def __init__(self):
-        BaseModel.__init__(self)
+        Model.__init__(self)
         self.pk_id = None # type: int
         self.anytext = None # type: str
 
@@ -126,9 +126,9 @@ class MainTableModel(BaseModel):
     def get_pk_fields(self):
         None
 
-class MainTableModelWithFK(BaseModel):
+class MainTableModelWithFK(Model):
     def __init__(self):
-        BaseModel.__init__(self)
+        Model.__init__(self)
         self.pk_id = None # type: int
         self.anytext = None # type: str
         self.fktest = None
@@ -142,7 +142,7 @@ class MainTableModelWithFK(BaseModel):
 
 if __name__ == "__main__":
     driver = 'mssqlpy'
-    query_type_test = DAOBase.QueryType.DIRECT_CALL
+    query_type_test = QueryType.DIRECT_CALL
     fl_reread=True
     withFK = True
     verify_dup = True
@@ -151,7 +151,7 @@ if __name__ == "__main__":
     if not withFK:
         model = MainTableModel()
     else:
-        if query_type_test != DAOBase.QueryType.DIRECT_CALL:
+        if query_type_test != QueryType.DIRECT_CALL:
             raise ValueError('No es necesaria esta prueba basta el caso DIRECT_CALL')
         else:
             model = MainTableModelWithFK()
@@ -163,7 +163,7 @@ if __name__ == "__main__":
 
     trx = TransactionManager(driver,{'dsn': 'MSSQLServer', 'host': '192.168.0.9','port':'1433',
                                     'user': 'sa', 'password': 'melivane', 'database': 'db_pytest'})
-    dao = MssqlDaoTest(trx)
+    dao = MssqlPersistenceTest(trx)
     dao.type_test = query_type_test
     dao.withFK = withFK
 

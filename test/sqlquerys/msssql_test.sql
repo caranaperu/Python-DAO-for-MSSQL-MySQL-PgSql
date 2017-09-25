@@ -38,11 +38,21 @@ REFERENCES [dbo].[tb_testfk] ([fktest])
 
 ALTER TABLE [dbo].[tb_maintable_fk] CHECK CONSTRAINT [FK_tb_maintable_fk_tb_testfk]
 
+------------------------
 
+CREATE TABLE [dbo].[tb_maintable_ckeys](
+	[main_code] [nvarchar](5) NOT NULL,
+	[main_number] [int] NOT NULL,
+	[anytext] [nvarchar](10) NOT NULL
+) ON [PRIMARY]
 
+CREATE UNIQUE NONCLUSTERED INDEX [IX_tb_maintable_ckeys] ON [dbo].[tb_maintable_ckeys]
+(
+	[main_code] ASC,
+	[main_number] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
 
-GO
-
+-------------------------------------
 insert into tb_testfk (fktest) values(1)
 
 ----------------
@@ -106,3 +116,4 @@ CREATE PROCEDURE [dbo].[withOutParamInsertTest]
 -- ---------------------------------------------------------------------------------------
 select * from tb_maintable;
 select * from tb_maintable_fk;
+select * from tb_maintable_ckeys

@@ -5,7 +5,7 @@ def direct_call_id(cur):
     print("lastrowid = {}".format(lastrowid))
     return lastrowid
 
-from DbDriverFactory import DbDriverFactory
+from DatabaseDriverFactory import DatabaseDriverFactory
 
 fname='Test'
 
@@ -18,7 +18,7 @@ type = "call_with_select_id"
 result = None
 
 driver = 'mssql'
-xx = DbDriverFactory.get_db_driver(driver)
+xx = DatabaseDriverFactory.get_db_driver(driver)
 
 if driver == 'mssql':
     conn = xx.connect(host='192.168.0.9',port='1433',database='db_pytest',user='sa',password='melivane')

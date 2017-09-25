@@ -1,4 +1,4 @@
-from DAOConstraints import *
+from Constraints import *
 
 class SqlHelper(object):
     @staticmethod
@@ -14,12 +14,12 @@ class SqlHelper(object):
                         sql_string = sql_string.replace(to_find, field + " " +
                                 operator.value + " '" + field_value + "'")
                     elif (field_value is None):
-                        if (operator == DAOConstraints.FilterType.EQUAL):
+                        if (operator == Constraints.FilterType.EQUAL):
                             sql_string = sql_string.replace(to_find, field + " is null")
                         else:
                             sql_string = sql_string.replace(to_find, field + " is not null")
-                    elif (operator == DAOConstraints.FilterType.PARTIAL or
-                        operator == DAOConstraints.FilterType.IPARTIAL):
+                    elif (operator == Constraints.FilterType.PARTIAL or
+                        operator == Constraints.FilterType.IPARTIAL):
                         sql_string = sql_string.replace(to_find, field + " " +
                                     operator.value + " '%" + str(field_value) + "%'")
                     else:
@@ -42,26 +42,26 @@ if __name__ == "__main__":
 
     print ('Memory (Before): {}Mb'.format(mem_profile.memory_usage_psutil()))
 
-    daoc = DAOConstraints()
-    daoc.add_sort_field('xxd1', DAOConstraints.SortType.DESC)
-    daoc.add_sort_field('xxd', DAOConstraints.SortType.ASC)
-    daoc.add_sort_field('ssss', DAOConstraints.SortType.ASC)
-    daoc.add_sort_field('555', DAOConstraints.SortType.ASC)
+    daoc = Constraints()
+    daoc.add_sort_field('xxd1', Constraints.SortType.DESC)
+    daoc.add_sort_field('xxd', Constraints.SortType.ASC)
+    daoc.add_sort_field('ssss', Constraints.SortType.ASC)
+    daoc.add_sort_field('555', Constraints.SortType.ASC)
 
-    daoc.add_filter_field('field_1', 3, DAOConstraints.FilterType.EQUAL)
+    daoc.add_filter_field('field_1', 3, Constraints.FilterType.EQUAL)
     daoc.add_filter_field('field_2', "soy el field1",
-                          DAOConstraints.FilterType.EQUAL)
+                          Constraints.FilterType.EQUAL)
     daoc.add_filter_field('field_22', "No soy el field1",
-                          DAOConstraints.FilterType.NO_EQUAL)
+                          Constraints.FilterType.NO_EQUAL)
     daoc.add_filter_field(
-        'fiel_3', 100.00, DAOConstraints.FilterType.GREAT_THAN)
+        'fiel_3', 100.00, Constraints.FilterType.GREAT_THAN)
     daoc.add_filter_field(
-        'fiel_31', 100.00, DAOConstraints.FilterType.LESS_THAN_EQ)
+        'fiel_31', 100.00, Constraints.FilterType.LESS_THAN_EQ)
     daoc.add_filter_field(
-        'fiel_32', 100.00, DAOConstraints.FilterType.NO_EQUAL)
+        'fiel_32', 100.00, Constraints.FilterType.NO_EQUAL)
 
-    daoc.add_filter_field('fiel_4', None, DAOConstraints.FilterType.NO_EQUAL)
-    daoc.add_filter_field('fiel_5', None, DAOConstraints.FilterType.EQUAL)
+    daoc.add_filter_field('fiel_4', None, Constraints.FilterType.NO_EQUAL)
+    daoc.add_filter_field('fiel_5', None, Constraints.FilterType.EQUAL)
     print ('Memory (After) : {}Mb'.format(mem_profile.memory_usage_psutil()))
 
     s = """select * from table t1

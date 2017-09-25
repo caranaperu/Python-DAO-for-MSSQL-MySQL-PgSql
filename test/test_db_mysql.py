@@ -7,7 +7,7 @@ def direct_call_id(cur):
     lastrowid = cur.fetchone()[0]
     return lastrowid
 
-from DbDriverFactory import DbDriverFactory
+from DatabaseDriverFactory import DatabaseDriverFactory
 #import pymssql
 
 fname='Test'
@@ -20,7 +20,7 @@ type = "directsp"
 
 result = None
 
-xx = DbDriverFactory.get_db_driver('mysql')
+xx = DatabaseDriverFactory.get_db_driver('mysql')
 
 conn = xx.connect(host='localhost', user='root',password='melivane', database='py_dbtest')
 cur = conn.cursor()
