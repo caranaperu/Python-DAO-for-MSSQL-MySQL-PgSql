@@ -19,6 +19,7 @@ class DatabaseDriverFactory(object):
         Este metodo es estatico.
 
         Parameters
+        ----------
         driver_id: str
             El identificador del driver a cargar el cual debe ser uno de los siguientes:
                 pgsql       - para postgres y cargara el driver psycopg2.
@@ -28,10 +29,12 @@ class DatabaseDriverFactory(object):
                 mssqlpypy   - para Microsoft SQL Server ,cargara el driver pypyodbc
 
         Returns
+        -------
         object
             Instancia de driver de base de datos.
 
         Raises
+        ------
         ValueError
             Si el parametro driver_id no identifica a uno soportado.
 
@@ -66,6 +69,7 @@ class DatabaseDriverFactory(object):
         Este metodo es estatico.
 
         Parameters
+        ----------
         driver_id: str
             El identificador del driver a cargar el cual debe ser uno de los siguientes:
                 pgsql       - para postgres y cargara el driver psycopg2.
@@ -75,10 +79,12 @@ class DatabaseDriverFactory(object):
                 mssqlpypy   - para Microsoft SQL Server ,cargara el driver pypyodbc
 
         Returns
+        -------
         bool
             true si es un driver basado en ODBC.
 
         Raises
+        ------
         ValueError
             Si el parametro driver_id no identifica a uno soportado.
 
@@ -101,6 +107,7 @@ class DatabaseDriverFactory(object):
         Este metodo es estatico.
 
         Parameters
+        ----------
         driver_id: str
             El identificador del driver a cargar el cual debe ser uno de los siguientes:
                 pgsql       - para postgres y cargara el driver psycopg2.
@@ -110,10 +117,12 @@ class DatabaseDriverFactory(object):
                 mssqlpypy   - para Microsoft SQL Server ,cargara el driver pypyodbc
 
         Returns
+        -------
         str
             con el encoding si es un driver ODBC o None de no serlo.
 
         Raises
+        ------
         ValueError
             Si el parametro driver_id no identifica a uno soportado, en este caso la excepcion
             sera enviado en el metodo de deteccion si el driver es ODBC.

@@ -1,6 +1,5 @@
 # from abc import ABCMeta
 import logging
-from Model import Model
 from PersistenceErrors import PersistenceErrors
 from PersistenceOperations import PersistenceOperations
 from TransactionManager import TransactionManager
@@ -15,6 +14,7 @@ class DatabasePersistence(PersistenceOperations):
     Se soporta en un delegate para el caso de base de datos (DatabaseDelegate).
 
     Examples
+    --------
         # Es pseudo code
         trx = TransactionManager('mssql', {'host': '192.168.0.9', 'port': '1433',
                                    'user': 'sa', 'password': 'melivane', 'database': 'pytest'})
@@ -23,22 +23,25 @@ class DatabasePersistence(PersistenceOperations):
 
         ret = dao.add(someModel_1)
 
-    Parameters
-    trx_mgr: TransactionManager
-        Para el control de la transaccion , digase el commit o rollback segun sea necesario.
-    db_delegate: DatabaseDelegate
-        Para soporte de las operaciones CRUD especificas para base de datos.
-
-    Raises
-    ValueError
-        En el caso que trx_mgr no sea instancia de TransactionManager
-        En el caso que db_delegate no sea instancia de DatabaseDelegate
-
     """
 
     def __init__(self, trx_mgr, db_delegate):
-        """Initialize  variables."""
+        """
+        Initialize  variables.
 
+        Parameters
+        ----------
+        trx_mgr: TransactionManager
+            Para el control de la transaccion , digase el commit o rollback segun sea necesario.
+        db_delegate: DatabaseDelegate
+            Para soporte de las operaciones CRUD especificas para base de datos.
+
+        Raises
+        ------
+        ValueError
+            En el caso que trx_mgr no sea instancia de TransactionManager
+            En el caso que db_delegate no sea instancia de DatabaseDelegate
+        """
         PersistenceOperations.__init__(self)
 
         # Debe estar definido el transaction manager , verificamos que
@@ -64,19 +67,21 @@ class DatabasePersistence(PersistenceOperations):
         Metodo para la lectura de un registro en la base de datos.
 
         Parameters
-        key_values: Union[int,tuple of (str)]
+        ----------
+        key_values: int or tuple of str
             Si es entero representara el unique id de lo contrario sera un tuple con la lista de
             nombre de los campos que componen la llave unica que identifica un registro.
         record_model: Model
             El modelo de datos destino de los datos obtenidos.
         c_constraints: Constraints , optional
             Los constraints a aplicar al selector (query) a usarse para obtener el registro.
-        sub_operation: str, opcional
+        sub_operation: str, optional
             cualquier string que describa una sub operacion a ejecutar , por ejemplo :
             "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
             implementaciones especficas de este metodo.
 
         Returns
+        -------
         PersistenceErrors
             DB_ERR_SERVERNOTFOUND , si no hay posibilidad de conectarse a la persistencia.
             DB_ERR_RECORDNOTFOUND , si el registro no existe en la persistencia.
@@ -130,7 +135,7 @@ class DatabasePersistence(PersistenceOperations):
             elif rowcount == 0:
                 ret_value = PersistenceErrors.DB_ERR_RECORDNOTFOUND
             else:
-                sql = self.__db_delegate.get_read_record_query(key_values, c_constraints, sub_operation)
+                sql = self.__db_delegate.get_read_record_query(record_model, key_values, c_constraints, sub_operation)
                 logging.debug(
                     "Too many records {} results for read a record with query - {}".format(cursor.rowcount, sql))
                 ret_value = PersistenceErrors.DB_ERR_TOOMANYRESULTS
@@ -153,6 +158,7 @@ class DatabasePersistence(PersistenceOperations):
         Metodo para agregar un registro en la base de datos.
 
         Parameters
+        ----------
         record_model: Model
             El modelo de datos conteniendo los datos a agregar.
         c_constraints: Constraints , optional
@@ -161,12 +167,13 @@ class DatabasePersistence(PersistenceOperations):
             cualquier string que describa una sub operacion a ejecutar , por ejemplo :
             "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
             implementaciones especficas de este metodo.
-        reread_record: bool , default True
+        reread_record: bool
             Si es true , se releera el registro luego de agregarse , esto sera necesario si
             existen campos en el registro que se generan en la persistencia y no del lado del
-            usuario.
+            usuario. (default is True)
 
         Returns
+        -------
         PersistenceErrors
             DB_ERR_SERVERNOTFOUND , Si no hay posibilidad de conectarse a la persistencia.
             DB_ERR_RECORDEXIST    , Si el registro ya existe en la persistencia.
@@ -246,10 +253,12 @@ class DatabasePersistence(PersistenceOperations):
         tarea al DatabaseDelegate.
 
         Parameters
+        ----------
         cursor: Cursor
             El cursor sobre el cual se esta ejecutando la poeracion a la persistencia.
 
         Returns
+        -------
         int
             El unique id o None de no existir.
 
@@ -267,11 +276,13 @@ class DatabasePersistence(PersistenceOperations):
         Por default esto es derivado al DatabaseDelegate especifico.
 
         Parameters
+        ----------
         error_msg: str
             Con el mensaje retornado por la persistencia a traves de una exception, el cual sera
             usado para desambiguar si es un error de llave duplicada o no.
 
         Returns
+        -------
         bool
             True si es un error de llave duplicada , False de lo contrario.
 
@@ -289,11 +300,13 @@ class DatabasePersistence(PersistenceOperations):
         Por default esto es derivado al DatabaseDelegate especifico.
 
         Parameters
+        ----------
         error_msg: str
             Con el mensaje retornado por el driver a traves de una exception, el cual sera
             usado para desambiguar si es un error de foreign key o no.
 
         Returns
+        -------
         bool
             True si es un error de foreign key , False de lo contrario.
 

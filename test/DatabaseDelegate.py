@@ -21,20 +21,22 @@ class DatabaseDelegate(PersistenceDelegate):
         Retorna la definicion del sql query para la lectura de un registro a la base de datos.
 
         Parameters
+        ----------
         record_model: Model
             Modelo el cual si pk_keys define una lista de campos , entonces este modelo contendra
             los valores de dichos campos.
-        key_values: Union[int,tuple of (str)]
+        key_values: int or tuple of str
             Si es entero representara el unique id de lo contrario sera un tuple con la lista de
             nombre de los campos que componen la llave unica que identifica un registro.
         c_constraints: Constraints , optional
             Los constraints a aplicar al selector (query) a usarse para obtener el registro.
-        sub_operation: str, opcional
+        sub_operation: str, optional
             cualquier string que describa una sub operacion a ejecutar , por ejemplo :
             "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
             implementaciones especficas de este metodo.
 
         Returns
+        -------
         str
             Con un string representando la sentencia sql a ejecutar, por default retorna None para
             evitar tener sobreescribir el metodo si no se realizara operacion de leer un registro.
@@ -47,16 +49,18 @@ class DatabaseDelegate(PersistenceDelegate):
         Retorna la definicion del sql query para agregar un registro a la base de datos.
 
         Parameters
+        ----------
         record_model: Model
             El modelo con los datos del registro a agregar.
         c_constraints: Constraints , optional
             Los constraints a aplicar al selector (query) a usarse para obtener el registro.
-        sub_operation: str, opcional
+        sub_operation: str, optional
             cualquier string que describa una sub operacion a ejecutar , por ejemplo :
             "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
             implementaciones especficas de este metodo.
 
         Returns
+        -------
         str
             Con un string representando la sentencia sql a ejecutar, por default retorna None para
             evitar tener sobreescribir el metodo si no se realizara operacion de add.
@@ -73,6 +77,7 @@ class DatabaseDelegate(PersistenceDelegate):
         operacion de la base de datos tendra que ser capturado por el metodo que invoca.
 
         Parameters
+        ----------
         handler: Cursor
             cursor de la base de datos sobre una coneccion abierta y con la cual se realizara la
             operacion.
@@ -80,12 +85,13 @@ class DatabaseDelegate(PersistenceDelegate):
             El modelo de datos con los datos del registro a agregar.
         c_constraints: Constraints , optional
             Los constraints a aplicar al selector (query) a usarse para obtener el registro.
-        sub_operation: str, opcional
+        sub_operation: str, optional
             cualquier string que describa una sub operacion a ejecutar , por ejemplo :
             "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
             implementaciones especficas de este metodo.
 
         Returns
+        -------
         str
             Con la sentencia sql recien ejecutada.
 
@@ -97,8 +103,13 @@ class DatabaseDelegate(PersistenceDelegate):
             if add_def['call_parameters']:
                 params = []
                 for field in add_def['call_parameters']:
+                    # Si el parametro corresponde a un atrributo del
+                    # modelo , se toma el valor del atributo , de lo contrario
+                    # se asume como un parametro directo
                     if hasattr(record_model, field):
                         params.append(getattr(record_model, field))
+                    else:
+                        params.append(field)
                 handler.callproc(sql_sentence, params)
             else:
                 handler.callproc(sql_sentence)
@@ -115,22 +126,24 @@ class DatabaseDelegate(PersistenceDelegate):
         operacion de la base de datos tendra que ser capturado por el metodo que invoca.
 
         Parameters
+        ----------
         handler: Cursor
             cursor de la base de datos sobre una coneccion abierta y con la cual se realizara la
             operacion.
         record_model: Model
             El modelo de datos donde se colocaran los datos leidos.
-        key_value: Union[int,tuple of (str)]
+        key_values: int or tuple of str
             Si es entero representara el unique id de lo contrario sera un tuple con la lista de
             nombre de los campos que componen la llave unica que identifica un registro.
         c_constraints: Constraints , optional
             Los constraints a aplicar al selector (query) a usarse para obtener el registro.
-        sub_operation: str, opcional
+        sub_operation: str, optional
             cualquier string que describa una sub operacion a ejecutar , por ejemplo :
             "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
             implementaciones especficas de este metodo.
 
         Returns
+        -------
         str
             Con la sentencia sql recien ejecutada.
 
@@ -142,8 +155,13 @@ class DatabaseDelegate(PersistenceDelegate):
             if read_def['call_parameters']:
                 params = []
                 for field in read_def['call_parameters']:
+                    # Si el parametro corresponde a un atrributo del
+                    # modelo , se toma el valor del atributo , de lo contrario
+                    # se asume como un parametro directo
                     if hasattr(record_model, field):
                         params.append(getattr(record_model, field))
+                    else:
+                        params.append(field)
                 handler.callproc(sql_sentence, params)
             else:
                 handler.callproc(sql_sentence)

@@ -67,3 +67,8 @@ BEGIN
 	insert into tb_triggertest(anytext) values(p_anytext);
 	select * from tb_maintable;
 END
+
+
+
+select * from py_dbtest.tb_maintable
+select anytext,id_key from tb_triggertest;

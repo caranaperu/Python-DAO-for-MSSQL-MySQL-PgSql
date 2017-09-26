@@ -23,6 +23,7 @@ class PersistenceDelegate(object):
         Retorna la definicion para add.
 
         Returns
+        -------
         dict of (str,any)
             La definicio para add.
 
@@ -38,12 +39,18 @@ class PersistenceDelegate(object):
         que este este definido y sea del tipo correcto.
 
         Parameters
+        ----------
         def_values: dict of (str,any)
             Este diccionario contendra la definicion de valores que puedan requerirse para efectuar
             un add a la persistencia , la interpretacion sera valida por las clases que sobrescriban
             esta.
 
+        Returns
+        -------
+        None
+
         Raises
+        ------
         AttributeError
             Si el parametro def_values no es un diccionario.
 
@@ -60,6 +67,7 @@ class PersistenceDelegate(object):
         Retorna la definicion para read.
 
         Returns
+        -------
         dict of (str,any)
             La definicio para read.
 
@@ -74,12 +82,18 @@ class PersistenceDelegate(object):
         Por default crea un deepcopy del diccionario enviado por def_values.
 
         Parameters
+        ----------
         def_values: dict of (str,any)
             Este diccionario contendra la definicion de valores que puedan requerirse para efectuar
             una lectura a la persistencia , la interpretacion sera valida por las clases que
             sobrescriban esta.
 
+        Returns
+        -------
+        None
+
         Raises
+        ------
         AttributeError
             Si el parametro def_values no es un diccionario.
 
@@ -96,10 +110,11 @@ class PersistenceDelegate(object):
         Retorna la definicion para la lectura de un registro en la persistencia.
 
         Parameters
+        ----------
         record_model: Model
             Modelo el cual si pk_keys define una lista de campos , entonces este modelo contendra
             los valores de dichos campos.
-        key_values: Union[int,tuple of (str)]
+        key_values: int or tuple of str
             Si es entero representara el unique id de lo contrario sera un tuple con la lista de
             nombre de los campos que componen la llave unica que identifica un registro.
         c_constraints: Constraints , optional
@@ -110,6 +125,7 @@ class PersistenceDelegate(object):
             implementaciones especficas de este metodo.
 
         Returns
+        -------
         str
             Con un string representando la sentencia a ejecutar, tal como la entienda la
             persistencia.
@@ -123,16 +139,18 @@ class PersistenceDelegate(object):
         Retorna la definicion para agregar un registro a la persistencia.
 
         Parameters
+        ----------
         record_model: Model
             El modelo de datos con los datos del registro a agregar.
         c_constraints: Constraints , optional
             Los constraints a aplicar al selector (query) a usarse para obtener el registro.
-        sub_operation: str, opcional
+        sub_operation: str, optional
             cualquier string que describa una sub operacion a ejecutar , por ejemplo :
             "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
             implementaciones especficas de este metodo.
 
         Returns
+        -------
         str
             Con un string representando la sentencia a ejecutar, tal como la entienda la
             persistencia.
@@ -149,6 +167,7 @@ class PersistenceDelegate(object):
         operacion de la base de datos tendra que ser capturado por el metodo que invoca.
 
         Parameters
+        ----------
         handler: object
             Representa el objeto a traves del cual se ejecutara la operacion en la persistencia.
             Si la persistencia es una base de datos , este seria por ejemplo el cursor.
@@ -156,12 +175,13 @@ class PersistenceDelegate(object):
             El modelo de datos con los datos del registro a agregar.
         c_constraints: Constraints , optional
             Los constraints a aplicar al selector (query) a usarse para obtener el registro.
-        sub_operation: str, opcional
+        sub_operation: str, optional
             cualquier string que describa una sub operacion a ejecutar , por ejemplo :
             "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
             implementaciones especficas de este metodo.
 
         Returns
+        -------
         str
             Con la sentencia recien ejecutada.
 
@@ -173,22 +193,24 @@ class PersistenceDelegate(object):
         Metodo el cual sera implementado para agregar un registro a la persistencia.
 
         Parameters
+        ----------
         handler: object
             Representa el objeto a traves del cual se ejecutara la operacion en la persistencia.
             Si la persistencia es una base de datos , este seria por ejemplo el cursor.
         record_model: Model
             El modelo de datos donde se colocaran los datos leidos.
-        key_values: Union[int,tuple of (str)]
+        key_values: int or tuple of str
             Si es entero representara el unique id de lo contrario sera un tuple con la lista de
             nombre de los campos que componen la llave unica que identifica un registro.
         c_constraints: Constraints , optional
             Los constraints a aplicar al selector (query) a usarse para obtener el registro.
-        sub_operation: str, opcional
+        sub_operation: str, optional
             cualquier string que describa una sub operacion a ejecutar , por ejemplo :
             "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
             implementaciones especficas de este metodo.
 
         Returns
+        -------
         str
             Con la sentencia recien ejecutada.
 
@@ -204,11 +226,13 @@ class PersistenceDelegate(object):
         ser identificado por multiples campos normales.
 
         Parameters
+        ----------
         handler: object
             Representa el objeto a traves del cual se ejecutara la operacion en la persistencia.
             Si la persistencia es una base de datos , este seria por ejemplo el cursor.
 
         Returns
+        -------
         int
             El unique id o None de no existir.
 
@@ -225,11 +249,13 @@ class PersistenceDelegate(object):
         del mensaje pueda determinarse si ese es el caso.
 
         Parameters
+        ----------
         error_msg: str
             Con el mensaje retornado por la persistencia a traves de una exception, el cual sera
             usaso para desambiguar si es un error de llave duplicada o no.
 
         Returns
+        -------
         bool
             True si es un error de llave duplicada , False de lo contrario.
 
@@ -246,11 +272,13 @@ class PersistenceDelegate(object):
         del mensaje pueda determinarse si ese es el caso.
 
         Parameters
+        ----------
         error_msg: str
             Con el mensaje retornado por la persistencia a traves de una exception, el cual sera
             usaso para desambiguar si es un error de foreign key o no.
 
         Returns
+        -------
         bool
             True si es un error de foreign key , False de lo contrario.
 

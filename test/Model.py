@@ -41,14 +41,17 @@ class Model(object):
         los que no correspondan seran ignorados.
 
         Parameters
+        ----------
         record: dict of (str,Any)
             Diccionario conteniendo los campos y valores a asignar al modelo, lo campos deben
             corresponder a los atributos del modelo.
 
         Returns
+        -------
             None
 
         Raises
+        ------
         TypeError
             Si el parametro record no es un diccionario.
 
@@ -66,15 +69,18 @@ class Model(object):
         Setea el valores de un campo del modelo.
 
         Parameters
+        ----------
         field: str
             Con el nombre del campo del modelo a setear.
         value: Any
             El valor del campo indicado por field.
 
         Returns
+        -------
         None
 
         Raises
+        ------
         ValueError
             Si el parametro field no esta definido.
 
@@ -94,6 +100,7 @@ class Model(object):
         retornar None en el caso que el metodo is_UID_pk retorna True.
 
         Returns
+        -------
         tuple of (str)
             Con la lista de nombres de campos
 
@@ -107,6 +114,7 @@ class Model(object):
         En el caso que este sea False , get_pk_fields debera estar definido.
 
         Returns
+        -------
         bool
             True si el modelo es identificado por un UID.
 

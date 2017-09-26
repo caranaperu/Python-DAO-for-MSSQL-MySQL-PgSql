@@ -13,7 +13,8 @@ class PersistenceOperations(object):
         Metodo el cual sera implementado para la lectura de un registro en la persistencia.
 
         Parameters
-        key_values: Union[int,tuple of (str)]
+        ----------
+        key_values: int or tuple of str
             Si es entero representara el unique id de lo contrario sera un tuple con la lista de
             nombre de los campos que componen la llave unica que identifica un registro.
         record_model: Model
@@ -26,6 +27,7 @@ class PersistenceOperations(object):
             implementaciones especficas de este metodo.
 
         Returns
+        -------
         PersistenceErrors
             DB_ERR_SERVERNOTFOUND , si no hay posibilidad de conectarse a la persistencia.
             DB_ERR_RECORDNOTFOUND , si el registro no existe en la persistencia.
@@ -42,6 +44,7 @@ class PersistenceOperations(object):
         Metodo el cual sera implementado para agregar un registro en la persistencia.
 
         Parameters
+        ----------
         record_model: Model
             El modelo de datos conteniendo los datos a agregar.
         c_constraints: Constraints , optional
@@ -56,6 +59,7 @@ class PersistenceOperations(object):
             usuario.
 
         Returns
+        -------
         PersistenceErrors
             DB_ERR_SERVERNOTFOUND , Si no hay posibilidad de conectarse a la persistencia.
             DB_ERR_RECORDEXIST    , Si el registro ya existe en la persistencia.
@@ -72,6 +76,7 @@ class PersistenceOperations(object):
         Metodo el cual sera implementado para actualizar un registro en la persistencia.
 
         Parameters
+        ----------
         record_model: Model
             El modelo de datos conteniendo los datos a actualizar.
         sub_operation: str , optional
@@ -80,6 +85,7 @@ class PersistenceOperations(object):
             implementaciones especficas de este metodo.
 
         Returns
+        -------
         PersistenceErrors
             DB_ERR_SERVERNOTFOUND , Si no hay posibilidad de conectarse a la persistencia.
             DB_ERR_CANTEXECUTE    , Error ejecutando la accion , el error exacto ver en el log.
@@ -97,7 +103,8 @@ class PersistenceOperations(object):
         Metodo el cual sera implementado para la eliminacion de un registro en la persistencia.
 
         Parameters
-        key_values: Union[int,tuple of (str)]
+        ----------
+        key_values: int or tuple of str
             Si es entero representara el unique id de lo contrario sera un tuple con la lista de
             nombre de los campos que componen la llave unica que identifica un registro.
         record_version_id: int
@@ -109,6 +116,7 @@ class PersistenceOperations(object):
             eliminarse.
 
         Returns
+        -------
         PersistenceErrors
             DB_ERR_SERVERNOTFOUND , Si no hay posibilidad de conectarse a la persistencia.
             DB_ERR_RECORDNOTFOUND , Si el registro no existe en la persistencia.
@@ -128,10 +136,12 @@ class PersistenceOperations(object):
         ser identificado por multiples campos normales.
 
         Parameters
+        ----------
         cursor: Cursor
             El cursor sobre el cual se esta ejecutando la poeracion a la persistencia.
 
         Returns
+        -------
         int
             El unique id o None de no existir.
 
@@ -157,11 +167,13 @@ class PersistenceOperations(object):
         del mensaje pueda determinarse si ese es el caso.
 
         Parameters
+        ----------
         error_msg: str
             Con el mensaje retornado por la persistencia a traves de una exception, el cual sera
             usaso para desambiguar si es un error de llave duplicada o no.
 
         Returns
+        -------
         bool
             True si es un error de llave duplicada , False de lo contrario.
 
@@ -178,11 +190,13 @@ class PersistenceOperations(object):
         del mensaje pueda determinarse si ese es el caso.
 
         Parameters
+        ----------
         error_msg: str
             Con el mensaje retornado por la persistencia a traves de una exception, el cual sera
             usaso para desambiguar si es un error de foreign key o no.
 
         Returns
+        -------
         bool
             True si es un error de foreign key , False de lo contrario.
 

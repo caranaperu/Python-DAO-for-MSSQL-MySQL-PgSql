@@ -63,6 +63,7 @@ class Constraints(object):
         Retorna a partir de que registro se leera en un query.
 
         Returns
+        -------
         int
             El valor o None si no esta definido.
 
@@ -77,10 +78,12 @@ class Constraints(object):
         Si start_row es mayor que end_row no debera limitarse el numero de registros.
 
         Parameters
+        ----------
         value: int
             Valor que indica a  partir de que registro se leera en un query.
 
         Returns
+        -------
         None
 
         """
@@ -99,6 +102,7 @@ class Constraints(object):
         Retorna a partir de que registro se leera en un query.
 
         Returns
+        -------
         int
             El valor o None si no esta definido.
 
@@ -113,10 +117,12 @@ class Constraints(object):
         Si start_row es mayor que end_row no debera limitarse el numero de registros.
 
         Parameters
+        ----------
         value: int
             Valor que indica hasta que registro se leera en un query.
 
         Returns
+        -------
         None
 
         """
@@ -135,7 +141,8 @@ class Constraints(object):
         Retorna un deepcopy del diccionario de campos de sort.
 
         Returns
-        dictionary  of (str,DAOConstraints.SortType)
+        -------
+        dict of (str,Constraints.SortType)
             deepcopy de los campos del sort en el constraint.
 
         """
@@ -153,15 +160,18 @@ class Constraints(object):
         uno nuevo sino se reemplazara al existente con el nuevo sort type.
 
         Parameters
+        ----------
         sort_field: str
             Nombre del campo de sort a agregar al diccionario de campos de sort.
         sort_direction: Constraints.SortType, default DAOConstraints.SortType.ASC
             Indicara si la direccion es ascendente o descendente para el sort.`
 
         Returns
-            None
+        -------
+        None
 
         Raises
+        ------
         AttributeError
             Si el parametro sort_field no es un string.
             Si el parametro sort_direction no es parte del enum DAOConstraints.SortType
@@ -186,11 +196,13 @@ class Constraints(object):
         Elimina un sort field DE EXISTIR.
 
         Parameters
+        ----------
         sort_key_name: str
             Nombre del campo de sort a eliminar del diccionario de campos de sort.
 
         Returns
-            None
+        -------
+        None
 
         """
         if self.__sort_fields.get(sort_key_name) is not None:
@@ -202,7 +214,8 @@ class Constraints(object):
         Retorna un deepcopy del diccionario de campos de filtro.
 
         Returns
-        dictionary  of (str,DAOConstraints.FilterType)
+        -------
+        dict of (str,Constraints.FilterType)
             deepcopy de los campos de filtro en el constraint.
 
         """
@@ -220,6 +233,7 @@ class Constraints(object):
         uno nuevo sino se reemplazara al existente con el nuevo valor y tipo de filtro..
 
         Parameters
+        ----------
         filter_field: str
             Nombre del campo de filtro a agregar al diccionario de campos de filtro.
         filter_value: Any
@@ -229,9 +243,11 @@ class Constraints(object):
             Indicara el tipo de filtro como mayor o igual, menor,igual , etc
 
         Returns
-            None
+        -------
+        None
 
         Raises
+        ------
         AttributeError
             Si el parametro filter_field no es un string.
             Si el parametro filter_type no es parte del enum DAOConstraints.FilterType
@@ -259,11 +275,13 @@ class Constraints(object):
         Elimina un filter field DE EXISTIR.
 
         Parameters
+        ----------
         filter_key_name: str
             Nombre del campo de filtro del diccionario de campos de filtro.
 
         Returns
-            None
+        -------
+        None
 
         """
         if self.__filter_fields.get(filter_key_name) is not None:
@@ -275,6 +293,7 @@ class Constraints(object):
         Retorna el valor de un campo de filtro.
 
         Parameters
+        ----------
         filter_key_name: str
             Nombre del campo de filtro que deseamos buscar en la lista de filtros.
 

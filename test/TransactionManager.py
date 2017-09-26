@@ -18,6 +18,7 @@ class TransactionManager(object):
     la ultima operacion.
 
     Examples
+    --------
         # Es pseudo code
         trx = TransactionManager('mssql', {'host': '192.168.0.9', 'port': '1433',
                                    'user': 'sa', 'password': 'melivane', 'database': 'pytest'})
@@ -31,29 +32,33 @@ class TransactionManager(object):
 
         trx.end_transaction()
 
-    Parameters
-    db_driver_id: str
-        El identificador del driver a cargar el cual debe ser uno de los siguientes:
-            pgsql       - para postgres y cargara el driver psycopg2.
-            mysql       - para MySQL cargara el driver mysql.connector
-            mssql       - para Microsoft SQL Server ,cargara el driver pymssql
-            mssqlpy     - para Microsoft SQL Server ,cargara el driver pyodbc
-            mssqlpypy   - para Microsoft SQL Server ,cargara el driver pypyodbc
-    db_params: dict of (str,str)
-        Diccionario conteniendo los parametros de inicializacion del driver de base de datos.
-            dsn
-            host
-            port
-            database
-            user
-            password
-        dsn es usado por los drivers basados en ODBC , los demas son utilizados en otrs drivers y ODBC
-        segun sea el caso , verificar la documentacion del driver elegido para usar.
-
     """
 
     def __init__(self, db_driver_id, db_params):
-        """Initialize  variables."""
+        """
+        Initialize  variables.
+
+        Parameters
+        ----------
+        db_driver_id: str
+            El identificador del driver a cargar el cual debe ser uno de los siguientes:
+                pgsql       - para postgres y cargara el driver psycopg2.
+                mysql       - para MySQL cargara el driver mysql.connector
+                mssql       - para Microsoft SQL Server ,cargara el driver pymssql
+                mssqlpy     - para Microsoft SQL Server ,cargara el driver pyodbc
+                mssqlpypy   - para Microsoft SQL Server ,cargara el driver pypyodbc
+        db_params: dict[str,str]
+            Diccionario conteniendo los parametros de inicializacion del driver de base de datos.
+                dsn
+                host
+                port
+                database
+                user
+                password
+            dsn es usado por los drivers basados en ODBC , los demas son utilizados en otrs drivers y ODBC
+            segun sea el caso , verificar la documentacion del driver elegido para usar.
+
+        """
         self.__db_driver_id = db_driver_id
         self.__db_params = db_params
         self.__connection = None
@@ -68,7 +73,12 @@ class TransactionManager(object):
         Mantiene un contador para determinar el numero de operaciones bajo la instancia del
         transaction manager , esto permitira que se haga el commit cuando este llegue a 0.
 
+        Returns
+        -------
+        None
+
         Raises
+        ------
         TransactionManagerException
             Si no ha sido inicializar el driver solicitado.
 
@@ -97,7 +107,7 @@ class TransactionManager(object):
                         user=self.__db_params['user'],
                         password=self.__db_params['password']
                     )
-            except Exception:
+            except Exception as ex:
                 raise TransactionManagerException(
                     "Cant load driver with parameters dsn={0[dsn]},host={0[host]},port={0[port]},database={0[database]},user={0[user]},password={0[password]}".format(
                         defaultdict(lambda: 'None', self.__db_params)))
@@ -111,10 +121,15 @@ class TransactionManager(object):
         rollback si has_errors es True.
 
         Parameters
+        ----------
         has_error: bool
             Si es True indicara que ha habido algun error durante una operacion bajo esta transaccion,
             por ende se debera efectuar el rollback e impedir que cualquier operacion posterior se
             realize.
+
+        Returns
+        -------
+        None
 
         """
         if self.__connection is None or self.__trxcount == 0:
@@ -141,10 +156,12 @@ class TransactionManager(object):
         Devuelve el cursor sobre el cual tiene efecto esta transaccion.
 
         Returns
+        -------
         object
             Con el cursor bajo la transaccion.
 
         Raises
+        ------
         TransactionManagerException
             En el caso que la connection no este aun inicializada , por ende no hay cursor.
 
@@ -165,6 +182,7 @@ class TransactionManager(object):
         Este metodo es utilitario para no consultar directamente al driver..
 
         Returns
+        -------
         str
             Con el encoding como por ejemplo UTF-8.
 
@@ -176,6 +194,7 @@ class TransactionManager(object):
         """
 
         Returns
+        ------
         object
             Con la instancia del driver cargado por esta instacia de transaction manager.
 
@@ -187,6 +206,7 @@ class TransactionManager(object):
         """
 
         Returns
+        -------
         str
             Con el identificador del driver en uso por el transaction manager..
 
