@@ -1,11 +1,54 @@
 
 from abc import ABCMeta, abstractmethod
 
+class PersistenceException(Exception): pass
 
 class PersistenceOperations(object):
     """Clase abstracta define las operaciones validas para accesar a la persistencia."""
 
     __metaclass__ = ABCMeta
+
+    ''' 
+    @abstractmethod
+    def fetch_records(self, c_constraints=None, sub_operation=None, raw_answers=True, record_type_classname=None):
+        """
+        Metodo el cual sera implementado para la lectura una lista de registros en la persistencia.
+    
+        Para efectuar las limitaciones de esta busqueda se usaran los constraints.
+    
+        Parameters
+        ----------
+        c_constraints: Constraints , optional
+            Los constraints a aplicar al selector (query) a usarse para obtener los registros.
+        sub_operation: str, opcional
+            cualquier string que describa una sub operacion a ejecutar , por ejemplo :
+            "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
+            implementaciones especficas de este metodo.
+        raw_answers: bool
+            Si se desea que la respuesta sea exactamente la devuelta por el driver y no una lista
+            de modelos.
+        record_type_classname: Model class type, optional
+            El type de la clase del modelo a usar si se requiere que se retorna una listqa de modelos
+            como respuesta.
+            Si raw_answers es False este parametro es obligatorio.
+    
+        Returns
+        -------
+        list[tuple[any]] or list[tuple[Model]]
+            la lista de resultados si raw_answers es True o una lista de Modelos
+            si raw_answers es False
+    
+        Raises
+        ------
+        PersistenceException
+        PersistenceErrors
+            DB_ERR_SERVERNOTFOUND , si no hay posibilidad de conectarse a la persistencia.
+            DB_ERR_CANTEXECUTE    , Error ejecutando la accion , el error exacto ver en el log.
+            DB_ERR_ALLOK          , Lectura correcta.
+    
+        """
+        pass
+    '''
 
     @abstractmethod
     def read_record(self, key_values, record_model, c_constraints=None, sub_operation=None):
@@ -14,11 +57,12 @@ class PersistenceOperations(object):
 
         Parameters
         ----------
-        key_values: int or tuple of str
+        key_values: int or tuple[str]
             Si es entero representara el unique id de lo contrario sera un tuple con la lista de
             nombre de los campos que componen la llave unica que identifica un registro.
         record_model: Model
-            El modelo de datos destino de los datos obtenidos.
+            El modelo de datos destino de los datos obtenidos, si es None la lectura solo servira como
+            verificacion de existencia del registro.
         c_constraints: Constraints , optional
             Los constraints a aplicar al selector (query) a usarse para obtener el registro.
         sub_operation: str, opcional
@@ -71,7 +115,7 @@ class PersistenceOperations(object):
         pass
 
     @abstractmethod
-    def update_record(self, record_model, sub_operation=None):
+    def update_record(self, record_model, sub_operation=None, reread_record=True):
         """
         Metodo el cual sera implementado para actualizar un registro en la persistencia.
 
@@ -83,6 +127,10 @@ class PersistenceOperations(object):
             cualquier string que describa una sub operacion a ejecutar , por ejemplo :
             "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
             implementaciones especficas de este metodo.
+        reread_record: bool , default True
+            Si es true , se releera el registro luego de actualizarse, esto sera necesario si
+            existen campos en el registro que se generan en la persistencia y no del lado del
+            usuario.
 
         Returns
         -------
@@ -91,26 +139,24 @@ class PersistenceOperations(object):
             DB_ERR_CANTEXECUTE    , Error ejecutando la accion , el error exacto ver en el log.
             DB_ERR_FOREIGNKEY     , Si el registro referencia a otro elemento no existente.
             DB_ERR_DUPLICATEKEY   , Si ya existe un registro con las mismas llaves unicas.
-            DB_ERR_RECORD_MODIFIED,
+            DB_ERR_RECORD_MODIFIED, Si se detecta que antes de update el registro ha sido cambiado
+                                    externamente.
+            DB_ERR_RECORDNOTFOUND , Si ha sido eliminado externamente de la persistencia antes del update.
             DB_ERR_ALLOK          , Actualizacion correcta.
 
         """
         pass
 
     @abstractmethod
-    def delete_record(self, key_values, record_version_id=None, verified_delete_check=True):
+    def delete_record(self, key_values, verified_delete_check=True):
         """
         Metodo el cual sera implementado para la eliminacion de un registro en la persistencia.
 
         Parameters
         ----------
-        key_values: int or tuple of str
+        key_values: int or tuple[str]
             Si es entero representara el unique id de lo contrario sera un tuple con la lista de
             nombre de los campos que componen la llave unica que identifica un registro.
-        record_version_id: int
-            Si el registro tiene un campo que indica la version del mismo , este parametro podra
-            contener dicho valor si se requiere previamente comparar antes de eliminar si ha habido
-            cambios en el registro.
         verified_delete_check: bool , default True
             Si es true , se verificara que la version del registro no haya cambiado antes de
             eliminarse.
@@ -199,6 +245,30 @@ class PersistenceOperations(object):
         -------
         bool
             True si es un error de foreign key , False de lo contrario.
+
+        """
+        pass
+
+    @abstractmethod
+    def is_record_modified_error(self, error_msg):
+        """
+        Metodo a implementar para indicar si el error corresponde a un record modificado esternamente
+        previo a un updatge o delete en la persistencia.
+
+        Dado que la especificacion de los drivers de persistencia existentes no tienen una manera
+        standard de codigos de error comun para casos como record modifiedy , se espera que a traves
+        del mensaje pueda determinarse si ese es el caso.
+
+        Parameters
+        ----------
+        error_msg: str
+            Con el mensaje retornado por la persistencia a traves de una exception, el cual sera
+            usado para desambiguar si es un error de foreign key o no.
+
+        Returns
+        -------
+        bool
+            True si es un error de record_modificed , False de lo contrario.
 
         """
         pass

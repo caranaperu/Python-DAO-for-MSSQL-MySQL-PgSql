@@ -4,6 +4,8 @@ from PersistenceErrors import PersistenceErrors
 from PersistenceOperations import PersistenceOperations
 from TransactionManager import TransactionManager
 from DatabaseDelegate import DatabaseDelegate
+from Model import Model
+from copy import deepcopy
 
 
 class DatabasePersistence(PersistenceOperations):
@@ -68,11 +70,12 @@ class DatabasePersistence(PersistenceOperations):
 
         Parameters
         ----------
-        key_values: int or tuple of str
+        key_values: int or tuple[str]
             Si es entero representara el unique id de lo contrario sera un tuple con la lista de
             nombre de los campos que componen la llave unica que identifica un registro.
         record_model: Model
-            El modelo de datos destino de los datos obtenidos.
+            El modelo de datos destino de los datos obtenidos, si es None la lectura solo servira como
+            verificacion de existencia del registro.
         c_constraints: Constraints , optional
             Los constraints a aplicar al selector (query) a usarse para obtener el registro.
         sub_operation: str, optional
@@ -110,7 +113,7 @@ class DatabasePersistence(PersistenceOperations):
             # Hay que aclarar que esperamos un solo registro de respuesta por ende no hay riesgo
             # en usar fetchall y al menos nos garantizara tener el numero correcto de respuestas.
             rows = cursor.fetchall()
-            rowcount = -1
+            rowcount = 0
             if rows:
                 rowcount = len(rows)
 
@@ -127,9 +130,12 @@ class DatabasePersistence(PersistenceOperations):
 
                 for col in columns:
                     print(col)
-                # Colocamos la respuesta en el modelo.
-                record = dict(zip(columns, rows[0]))
-                record_model.set_values(record)
+
+                # Colocamos la respuesta en el modelo, si record_model
+                # no es None
+                if record_model:
+                    record = dict(zip(columns, rows[0]))
+                    record_model.set_values(record)
 
                 ret_value = PersistenceErrors.DB_ERR_ALLOK
             elif rowcount == 0:
@@ -237,13 +243,194 @@ class DatabasePersistence(PersistenceOperations):
                 self.__trx_mgr.end_transaction()
         return ret_value
 
-    def delete_record(self, key_values, record_version_id=None, verified_delete_check=True):
-        # type: (Any,int,bool) -> PersistenceErrors
-        return PersistenceErrors.DB_ERR_CANTEXECUTE
+    def delete_record(self, key_values, verified_delete_check=True):
+        """
+        Metodo para la eliminacion de un registro en la base de datos.
 
-    def update_record(self, record_model, sub_operation=None):
-        # type: (Model,str) -> PersistenceErrors
-        return PersistenceErrors.DB_ERR_CANTEXECUTE
+        Parameters
+        ----------
+        key_values: int or tuple[any]
+            Si es entero representara el unique id de lo contrario sera un tuple con la lista de
+            de los valores de los campos que componen la llave unica que identifica un registro.
+        verified_delete_check: bool , default True
+            Si es true , se verificara que la version del registro no haya cambiado antes de
+            eliminarse.
+
+        Returns
+        -------
+        PersistenceErrors
+            DB_ERR_SERVERNOTFOUND , Si no hay posibilidad de conectarse a la persistencia.
+            DB_ERR_RECORDNOTFOUND , Si el registro no existe en la persistencia.
+            DB_ERR_FOREIGNKEY     , Si el registro es referenciado por otro elemento en la persistencia.
+            DB_ERR_CANTEXECUTE    , Error ejecutando la accion , el error exacto ver en el log.
+            DB_ERR_ALLOK          , Eliminacion correcta.
+
+        """
+        try:
+            self.__trx_mgr.start_transaction()
+        except Exception as ex:
+            logging.debug(
+                "Error starting transaction updating a record , exception message {} ".format(str(ex)))
+            return PersistenceErrors.DB_ERR_SERVERNOTFOUND
+
+        ret_value = PersistenceErrors.DB_ERR_ALLOK
+
+        try:
+            # Open the transaction
+            cursor = self.__trx_mgr.get_transaction_cursor()
+
+                # relectura.
+            if verified_delete_check:
+                ret_value = self.read_record(key_values, None)
+
+            if ret_value == PersistenceErrors.DB_ERR_ALLOK:
+                # delete record
+                self.__db_delegate.execute_delete(cursor, key_values)
+            else:
+                return ret_value
+
+        except Exception as ex:
+            sql = self.__db_delegate.get_delete_record_query(key_values)
+
+            if self.is_foreign_key_error(str(ex)):
+                logging.debug(
+                    "Error deleting record , foreign key error,sql = '{}'".format(sql))
+                ret_value = PersistenceErrors.DB_ERR_FOREIGNKEY
+            else:
+                logging.debug(
+                    "Error deleting record , exception message {} , sql ='{}'".format(str(ex), sql))
+                ret_value = PersistenceErrors.DB_ERR_CANTEXECUTE
+        finally:
+            # Si no es un error terminal cerramos normalmente de lo contrario indicamos
+            # que existe un error lo cual causara que se cierre la transaccion y se hara un rollback
+            if ret_value != PersistenceErrors.DB_ERR_ALLOK:
+                self.__trx_mgr.end_transaction(True)
+            else:
+                self.__trx_mgr.end_transaction()
+        return ret_value
+
+    def update_record(self, record_model, sub_operation=None, reread_record=True):
+        """
+        Metodo para actualizar un registro en la base de datos.
+
+        Hay que resaltar que ademas de efectuar el update , puede verificar si el registro
+        ha sido modificado o eliminado antes de actualizar.
+        Al terminar reelera el registro para obtener los datos que pueden ser modificados
+        por triggers o stored procedures internos y mantener asi actualizado el modelo
+        con todos los datos luego de la actualizacion.
+
+        Para determinar si el registro ha sido modificado , el modelo debera implementar
+        get_record_version_field() y retornar el nombre del campo para validar la version
+        del registro , no existe forma standard de hacerlo , en pgsql por ejemplo xmin
+        puede ser usado para esto , en otras bases puede ser un timestamp o rowversion.
+
+        Si ademas se desea releer los datos al final usar el parametro reread_record
+
+        Parameters
+        ----------
+        record_model: Model
+            El modelo de datos conteniendo los datos a actualizar.
+        sub_operation: str , optional
+            cualquier string que describa una sub operacion a ejecutar , por ejemplo :
+            "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
+            implementaciones especficas de este metodo.
+        reread_record: bool , default True
+            Si es true , se releera el registro luego de actualizarse, esto sera necesario si
+            existen campos en el registro que se generan en la persistencia y no del lado del
+            usuario y se desea actualizar el modelo con todos los datos del registro actualizado.
+
+        Returns
+        -------
+        PersistenceErrors
+            DB_ERR_SERVERNOTFOUND , Si no hay posibilidad de conectarse a la persistencia.
+            DB_ERR_CANTEXECUTE    , Error ejecutando la accion , el error exacto ver en el log.
+            DB_ERR_FOREIGNKEY     , Si el registro referencia a otro elemento no existente.
+            DB_ERR_DUPLICATEKEY   , Si ya existe un registro con las mismas llaves unicas.
+            DB_ERR_RECORD_MODIFIED, Si se detecta que antes de update el registro ha sido cambiado
+                                    externamente. El modelo final  tendra los datos modificados.
+            DB_ERR_RECORDNOTFOUND , Si ha sido eliminado externamente antes del update.
+            DB_ERR_ALLOK          , Actualizacion correcta.
+
+        """
+        try:
+            self.__trx_mgr.start_transaction()
+        except Exception as ex:
+            logging.debug(
+                "Error starting transaction updating a record , exception message {} ".format(str(ex)))
+            return PersistenceErrors.DB_ERR_SERVERNOTFOUND
+
+        ret_value = PersistenceErrors.DB_ERR_ALLOK
+
+        try:
+            # Open the transaction
+            cursor = self.__trx_mgr.get_transaction_cursor()
+
+            # Durante un update las unique keys se conocen desde el modelo
+            # por ende solicitamos cuales son y en el caso sea un unique id
+            # recogemos el valor como llave de lo contrario se espera la
+            # lista de campos que identifican en forma unica el registro.
+            pk_keys = record_model.get_pk_fields()
+
+            # Si el unique id es el pk enviamos el valor, de lo contrario se enviaran
+            # la lista de campos que hacen unico el registro.
+            if pk_keys and record_model.is_pk_uid():
+                pk_keys = getattr(record_model, pk_keys[0])
+
+            # Extraempos del modelo enviado la version del registro , siempre
+            # que el modelo soporte version.
+            if record_model.get_record_version_field():
+                version_field_upd = getattr(record_model, record_model.get_record_version_field())
+
+                if version_field_upd:
+                    # Copia para no alterar el original
+                    record_model_to_read = deepcopy(record_model)
+                    # lectura para verificacion de version
+                    ret_value = self.read_record(pk_keys, record_model_to_read)
+
+                    if ret_value == PersistenceErrors.DB_ERR_ALLOK:
+                        # Comparamos la version original vs el recientemente leido
+                        # de ser diferentes se indica el error de registro modificado.
+                        version_field_read = getattr(record_model_to_read, record_model_to_read.get_record_version_field())
+                        if str(version_field_upd) != str(version_field_read):
+                            # Ponemos los datos modificados en el record model
+                            record_model = deepcopy(record_model_to_read)
+                            ret_value = PersistenceErrors.DB_ERR_RECORD_MODIFIED
+
+            if ret_value == PersistenceErrors.DB_ERR_ALLOK:
+                # update record
+                self.__db_delegate.execute_update(cursor, record_model, sub_operation)
+
+                # relectura.
+                if reread_record:
+                    ret_value = self.read_record(pk_keys, record_model, None, sub_operation)
+
+        except Exception as ex:
+            sql = self.__db_delegate.get_update_record_query(record_model, sub_operation)
+
+            if self.is_duplicate_key_error(str(ex)):
+                logging.debug(
+                    "Error updating record , already exist a record with the key,sql = '{}'".format(sql))
+                ret_value = PersistenceErrors.DB_ERR_RECORDEXIST
+            elif self.is_foreign_key_error(str(ex)):
+                logging.debug(
+                    "Error updating record , foreign key error,sql = '{}'".format(sql))
+                ret_value = PersistenceErrors.DB_ERR_FOREIGNKEY
+            elif self.is_record_modified_error(str(ex)):
+                logging.debug(
+                    "Error updating record , record modified error,sql = '{}'".format(sql))
+                ret_value = PersistenceErrors.DB_ERR_RECORD_MODIFIED
+            else:
+                logging.debug(
+                    "Error updating record , exception message {} , sql ='{}'".format(str(ex), sql))
+                ret_value = PersistenceErrors.DB_ERR_CANTEXECUTE
+        finally:
+            # Si no es un error terminal cerramos normalmente de lo contrario indicamos
+            # que existe un error lo cual causara que se cierre la transaccion y se hara un rollback
+            if ret_value != PersistenceErrors.DB_ERR_ALLOK:
+                self.__trx_mgr.end_transaction(True)
+            else:
+                self.__trx_mgr.end_transaction()
+        return ret_value
 
     def get_uid(self, cursor):
         """
@@ -312,3 +499,29 @@ class DatabasePersistence(PersistenceOperations):
 
         """
         return self.__db_delegate.is_foreign_key_error(error_msg)
+
+    def is_record_modified_error(self, error_msg):
+        """
+        Debera indicar si un registro al hacer update o delete ha sido modificado externamente.
+
+        IMPORTANTE: Este error formalmente no existe en bases de datos y sera usado cuando el
+        error de registro modificado sea detectado dentro de un Stored Procedure , queda al
+        implementador del mismo mrealizarlo y enviar el error en caso suceda y se requiere
+        verificar este hecho.
+        Actualmente se espera que el mensaje contenga el texto 'record modified'
+
+        Parameters
+        ----------
+        error_msg: str
+            Con el mensaje retornado por la persistencia a traves de una exception, el cual sera
+            usaso para desambiguar si es un error de registro modificado o no.
+
+        Returns
+        -------
+        bool
+            True si es un error de registro modificado , False de lo contrario.
+
+        """
+        if error_msg.find("record modified") >= 0:
+            return True
+        return False

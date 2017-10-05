@@ -2,10 +2,7 @@ from collections import defaultdict
 from DatabaseDriverFactory import DatabaseDriverFactory
 
 
-class TransactionManagerException(Exception):
-    def __init__(self, *args, **kwargs):
-        Exception.__init__(self, *args, **kwargs)
-
+class TransactionManagerException(Exception): pass
 
 class TransactionManager(object):
     """

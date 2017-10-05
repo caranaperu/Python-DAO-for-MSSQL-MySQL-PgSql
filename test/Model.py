@@ -1,7 +1,8 @@
 """Define la base para todos los modelos , esta clase es abstracta."""
 from abc import ABCMeta, abstractmethod
+from carlib.utils import cls_locked_attrs
 
-
+@cls_locked_attrs
 class Model(object):
     """
     Clase base para todos los modelos.
@@ -120,3 +121,16 @@ class Model(object):
 
         """
         return False
+
+    def get_record_version_field(self):
+        """
+        Retorna el campo que indica la version del registro de existir uno.
+
+        Returns
+        -------
+        str
+            Nombre del campo distinto de None de existir uno. Por default devolvemos
+            None.
+
+        """
+        return None
