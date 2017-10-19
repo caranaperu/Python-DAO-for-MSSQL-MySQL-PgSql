@@ -1,4 +1,6 @@
 from abc import ABCMeta
+
+from Constraints import Constraints
 from PersistenceDelegate import PersistenceDelegate
 
 
@@ -16,6 +18,31 @@ class DatabaseDelegate(PersistenceDelegate):
         self.add_definition = {'is_call': False, 'call_parameters': None}
         self.read_definition = {'is_call': False, 'call_parameters': None}
         self.update_definition = {'is_call': False, 'call_parameters': None}
+        self.fetch_definition = {'is_call': False, 'call_parameters': None}
+
+    def get_fetch_records_query(self, c_constraints=None, sub_operation=None):
+        """
+        Retorna la definicion para la lectura de multiples registros en la persistencia.
+
+        Para efectuar las limitaciones de esta busqueda se usaran los constraints.
+
+        Parameters
+        ----------
+        c_constraints: Constraints , optional
+            Los constraints a aplicar al selector (query) a usarse para obtener los registros.
+        sub_operation: str, opcional
+            cualquier string que describa una sub operacion a ejecutar , por ejemplo :
+            "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
+            implementaciones especficas de este metodo.
+
+        Returns
+        -------
+        str
+            Con un string representando la sentencia sql a ejecutar, por default retorna None para
+            evitar tener sobreescribir el metodo si no se realizara operacion de fetch de registros.
+
+        """
+        return None
 
     def get_read_record_query(self, record_model, key_values, c_constraints=None, sub_operation=None):
         """
@@ -109,6 +136,25 @@ class DatabaseDelegate(PersistenceDelegate):
 
         """
         pass
+
+    def execute_fetch(self, handler, c_constraints=None, sub_operation=None, raw_answers=True,
+                      record_type_classname=None):
+        sql_sentence = self.get_fetch_records_query(c_constraints, sub_operation)
+        fetch_def = self.fetch_definition
+        if fetch_def['is_call']:
+            if fetch_def['call_parameters']:
+                params = []
+                for field_value in fetch_def['call_parameters']:
+                    # Para este caso siempre seran valores directos
+                    # ya que no existe modelo
+                    params.append(field_value)
+                handler.callproc(sql_sentence, params)
+            else:
+                print(sql_sentence)
+                handler.callproc(sql_sentence)
+        else:
+            handler.execute(sql_sentence)
+        return sql_sentence
 
     def execute_add(self, handler, record_model, c_constraints=None, sub_operation=None):
         """
@@ -296,3 +342,58 @@ class DatabaseDelegate(PersistenceDelegate):
         else:
             handler.execute(sql_sentence)
         return sql_sentence
+
+    ############################################
+    # UTILS
+    ############################################
+
+    def get_as_bool(self,bool_value):
+        """
+        Dado que no todas las bases de datos tratan el bool igual , aqui podemos mapear.
+
+        Postgres por ejemplo trata los booleanos como 'Y' and 'N' otros simplemente como
+        true o false.
+
+        Parameters
+        ----------
+        bool_value: bool
+            booleano a mapearse la base de datos.
+
+        Returns
+        -------
+        str
+            Con el valor mapeado a la especifica base de datos , si el parametro no fuera
+            booleano sera retornado como false.
+
+        """
+        if type(bool_value) == bool and bool_value:
+            return 'true'
+        else:
+            return 'false'
+
+    def get_filter_operator(self,filter_type):
+        """
+        Mapea el operador del query a la especifica base de datos.
+
+        Dado que no todos los operadores son tomados exactamente igual en todas las db, este
+        metodo permite mapear al especifico si fuera necesario.
+
+        Postgres por ejemplo trata ilike diferente de like otras bases de datos no tienen ese operador
+        por ende ilike podria ser mapeado a like.
+
+        Parameters
+        ----------
+        filter_type: Constraints.FilterType
+            Indicara el tipo de filtro a mapeaer
+
+        Returns
+        -------
+        str
+            Con el valor mapeado a la especifica base de datos , por defaul devuelve el valor
+            prefijado para el tipo de operador de filtro amenos que IPARTIAL sea requerido en
+            cuyo caso retornar el valor de PARTIAL que es el normal en la mayoria de DBs.
+
+        """
+        if filter_type == Constraints.FilterType.IPARTIAL:
+            return Constraints.FilterType.PARTIAL.value
+        return filter_type.value

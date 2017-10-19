@@ -32,7 +32,7 @@ class MainTableModel(Model):
         return ('pk_id',)
 
     # retornar None si no se desea chequeo de version
-    def get_record_version_field(self):
+    def get_version_field(self):
         return 'version_row'
 
 

@@ -1,7 +1,7 @@
 # from abc import ABCMeta
 import logging
 from PersistenceErrors import PersistenceErrors
-from PersistenceOperations import PersistenceOperations
+from PersistenceOperations import *
 from TransactionManager import TransactionManager
 from DatabaseDelegate import DatabaseDelegate
 from Model import Model
@@ -320,7 +320,7 @@ class DatabasePersistence(PersistenceOperations):
         con todos los datos luego de la actualizacion.
 
         Para determinar si el registro ha sido modificado , el modelo debera implementar
-        get_record_version_field() y retornar el nombre del campo para validar la version
+        get_version_field() y retornar el nombre del campo para validar la version
         del registro , no existe forma standard de hacerlo , en pgsql por ejemplo xmin
         puede ser usado para esto , en otras bases puede ser un timestamp o rowversion.
 
@@ -378,8 +378,8 @@ class DatabasePersistence(PersistenceOperations):
 
             # Extraempos del modelo enviado la version del registro , siempre
             # que el modelo soporte version.
-            if record_model.get_record_version_field():
-                version_field_upd = getattr(record_model, record_model.get_record_version_field())
+            if record_model.get_version_field():
+                version_field_upd = getattr(record_model, record_model.get_version_field())
 
                 if version_field_upd:
                     # Copia para no alterar el original
@@ -390,7 +390,7 @@ class DatabasePersistence(PersistenceOperations):
                     if ret_value == PersistenceErrors.DB_ERR_ALLOK:
                         # Comparamos la version original vs el recientemente leido
                         # de ser diferentes se indica el error de registro modificado.
-                        version_field_read = getattr(record_model_to_read, record_model_to_read.get_record_version_field())
+                        version_field_read = getattr(record_model_to_read, record_model_to_read.get_version_field())
                         if str(version_field_upd) != str(version_field_read):
                             # Ponemos los datos modificados en el record model
                             record_model = deepcopy(record_model_to_read)
@@ -431,6 +431,151 @@ class DatabasePersistence(PersistenceOperations):
             else:
                 self.__trx_mgr.end_transaction()
         return ret_value
+
+    def fetch_records(self, c_constraints=None, sub_operation=None, raw_answers=True, record_type_classname=None):
+        """
+        Metodo para leer una lista de registros de un base de datos.
+
+        Para efectuar las limitaciones de esta busqueda se usaran los constraints.
+
+        Parameters
+        ----------
+        c_constraints: Constraints , optional
+            Los constraints a aplicar al selector (query) a usarse para obtener los registros.
+        sub_operation: str, opcional
+            cualquier string que describa una sub operacion a ejecutar , por ejemplo :
+            "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
+            implementaciones especficas de este metodo.
+        raw_answers: bool
+            Si se desea que la respuesta sea exactamente la devuelta por el driver y no una lista
+            de modelos.
+            Importante: En este caso el registro 0 contendra la descripcion de los campos para un posible
+            uso postproceso.
+        record_type_classname: type Model , optional
+            El type de la clase del modelo a usar si se requiere que se retorna una lista de modelos
+            como respuesta.
+            Si raw_answers es False este parametro es obligatorio.
+
+        Returns
+        -------
+        list[tuple[any]] or list[tuple[Model]]
+            la lista de resultados si raw_answers es True o una lista de Modelos
+            si raw_answers es False
+            Si raw_answers es True el primer resultado en la lsita sera la descripcion
+            de los campos.
+
+        Raises
+        ------
+        PersistenceException
+            El  motivo de la excepcion se encuentra en e.persistent_error y puede ser cualquiera
+            de los siguientes:
+                DB_ERR_SERVERNOTFOUND , si no hay posibilidad de conectarse a la persistencia.
+                DB_ERR_CANTEXECUTE    , Error ejecutando la accion , el error exacto ver en el log.
+                DB_ERR_ALLOK          , Lectura correcta.
+
+        """
+        err_value = PersistenceErrors.DB_ERR_ALLOK
+
+        try:
+            self.__trx_mgr.start_transaction()
+        except Exception as ex:
+            logging.debug(
+                "Error starting transaction fetching records , exception message {} ".format(str(ex)))
+            err_value =  PersistenceErrors.DB_ERR_SERVERNOTFOUND
+
+        answers = []
+        description = None
+
+        try:
+            # Open the transaction
+            cursor = self.__trx_mgr.get_transaction_cursor()
+
+            # Execute query
+            self.__db_delegate.execute_fetch(cursor, c_constraints, sub_operation)
+
+            if raw_answers:
+                # Hacemos fetchall pero suponemos que ante una gran cantidad de datos
+                # se usaran limites en el query , de lo contrario podemos quedarnos sin
+                # memoria.
+                # En el elemento 0 de las respuestas ira la descripcion de los campos para
+                # poder convertir a modelos o postproceso que pueda requerirse.
+
+                # Punto 1
+                # Dado que el driver de mysql soportado y al hecho de un query via callproc
+                # bajo ese driver reporta las respuestas de manera no standard a traves de
+                # stored_results, verificamos si exsten respuestas en dicho lugar , de no
+                # encontrar nada procedemos de la manera habitual.
+                if hasattr(cursor, 'stored_results'):
+                    for result in cursor.stored_results():
+                        answers = result.fetchall()
+                        answers.insert(0,result.description)
+
+                # Si no hay respuestas encontradas pasamos al metodo normal.
+                if not answers or len(answers) == 0:
+                    answers = cursor.fetchall()
+                    answers.insert(0, cursor.description)
+
+            else:
+                # Para el caso de raw_answers procedemos a leer en bloques de 100 y los pasamos
+                # al modelo correspondiente.
+                columns = None
+                encodetype = self.__trx_mgr.encoding()
+
+                # Al igual que lo apuntado en el punto 1 , primero buscamos en stored_results , de no haber
+                # respuestas seguimos el metodo standard.
+                if hasattr(cursor, 'stored_results'):
+                    for result in cursor.stored_results():
+                        if encodetype:
+                            columns = [i[0].encode(encodetype).rstrip('\x00') for i in result.description]
+                        else:
+                            columns = [i[0] for i in result.description]
+
+                        while True:
+                            rows = result.fetchmany(100)
+                            if not rows: break
+
+                            for row in rows:
+                                # Colocamos la respuesta en el modelo, y lo agregamos a las respuestas
+                                model = record_type_classname()
+                                model.set_values(dict(zip(columns, row)))
+                                answers.append(model)
+
+                # No hay respuestas , procedemos por el metodo standard.
+                if len(answers) == 0 and not columns:
+                    if encodetype:
+                        columns = [i[0].encode(encodetype).rstrip('\x00') for i in cursor.description]
+                    else:
+                        columns = [i[0] for i in cursor.description]
+
+                    while True:
+                        rows = cursor.fetchmany(100)
+                        if not rows: break
+
+                        for row in rows:
+                            # Colocamos la respuesta en el modelo, y lo agregamos a las respuestas
+                            model = record_type_classname()
+                            model.set_values(dict(zip(columns, row)))
+                            answers.append(model)
+
+            return answers
+
+        except Exception as ex:
+            sql = self.__db_delegate.get_fetch_records_query(c_constraints, sub_operation)
+            logging.debug(
+                    "Error reading records , exception message {} , sql ='{}'".format(str(ex), sql))
+
+            if isinstance(ex,PersistenceException):
+                err_value = ex.persistent_error
+            else:
+                err_value = PersistenceErrors.DB_ERR_CANTEXECUTE
+            raise
+        finally:
+            # Si no es un error terminal cerramos normalmente de lo contrario indicamos
+            # que existe un error lo cual causara que se cierre la transaccion y se hara un rollback
+            if err_value != PersistenceErrors.DB_ERR_ALLOK:
+                self.__trx_mgr.end_transaction(True)
+            else:
+                self.__trx_mgr.end_transaction()
 
     def get_uid(self, cursor):
         """

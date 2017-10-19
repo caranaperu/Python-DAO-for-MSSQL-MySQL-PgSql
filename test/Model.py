@@ -122,7 +122,7 @@ class Model(object):
         """
         return False
 
-    def get_record_version_field(self):
+    def get_version_field(self):
         """
         Retorna el campo que indica la version del registro de existir uno.
 

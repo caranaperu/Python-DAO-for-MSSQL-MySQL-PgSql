@@ -68,6 +68,7 @@ class Constraints(object):
             El valor o None si no esta definido.
 
         """
+        print("llamado start_row")
         return self.__start_row
 
     @start_row.setter
@@ -87,6 +88,7 @@ class Constraints(object):
         None
 
         """
+        print("llamado set start_row")
         if isinstance(value, int) is True:
             self.__start_row = value
         else:

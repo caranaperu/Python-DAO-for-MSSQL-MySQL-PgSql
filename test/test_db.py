@@ -19,20 +19,34 @@ print ('Memory (Before): {}Mb'.format(memb))
 t1 = time.clock()
 
 conn = xx.connect(host='localhost', user='root',
-                  password='melivane', database='test')
+                  password='melivane', database='py_dbtest')
 cur = conn.cursor()
 try:
-    cur.execute("""SELECT * from tb_atletas""")
-    # print(cur.description)
+    cur.execute("SELECT * from tb_maintable")
+    #cur.callproc("fetch_results")
+    answers = None
+
+    if hasattr(cur,'stored_results'):
+        for result in cur.stored_results():
+           answers = result.fetchall()
+           print(answers)
+           print(result.description)
+           description = result.description
+
+    if not answers or len(answers) == 0:
+        answers = cur.fetchall()
+        print(cur.description)
+        description = cur.description
+
     print(cur.rowcount)
-    field_names = [i[0] for i in cur.description]
+    field_names = [i[0] for i in description]
     print(field_names)
-    for row in cur.fetchall():
+    for row in answers:
         print("Record\n")
         print(row)
-        for i in xrange(len(cur.description)):
+        for i in xrange(len(description)):
             print("FieldName: %-50s Value: %-50s" %
-                  (cur.description[i][0], row[i]))
+                  (description[i][0], row[i]))
 
         print("=================\n")
     print(cur.rowcount)
@@ -148,8 +162,8 @@ finally:
     conn.close()
 
 
-from BaseModel import Model
-from DAOBase import DatabaseDAO
+from Model import Model
+from DatabasePersistence import DatabasePersistence
 from TransactionManager import TransactionManager
 
 
@@ -165,7 +179,7 @@ class SqlTestModel(Model):
         return None
 
 
-class DAOBaseMSSQL(DatabaseDAO):
+class DAOBaseMSSQL(DatabasePersistence):
     def get_read_record_query(self, key_value, c_constraints=None, sub_operation=None):
         # type: (Any,DAOConstraints,str) ->str
         return "select marca,modelo,version,fecha_dua from veritrade where CHASSISDATA ='JTFSS22P4H0158420' and ANO_NACIONALIZACION = 2017"
@@ -184,7 +198,7 @@ class DAOBaseMSSQL(DatabaseDAO):
         # type: (str) -> bool
         return False
 
-class DAOBasePGSQL(DatabaseDAO):
+class DAOBasePGSQL(DatabasePersistence):
     def get_read_record_query(self, key_value, c_constraints=None, sub_operation=None):
         # type: (Any,DAOConstraints,str) ->str
         return "select id,name,code,create_date from account_account where code ='103000'"
@@ -203,7 +217,7 @@ class DAOBasePGSQL(DatabaseDAO):
         # type: (str) -> bool
         return False
 
-class DAOBaseMYSQL(DatabaseDAO):
+class DAOBaseMYSQL(DatabasePersistence):
     def get_read_record_query(self, key_value, c_constraints=None, sub_operation=None):
         # type: (Any,DAOConstraints,str) ->str
         if isinstance(key_value,dict):
@@ -336,7 +350,7 @@ print(test3Model.__dict__)
 print("==============================")
 
 # =======================================================================================================
-class DAOBaseMSSQL2(DatabaseDAO):
+class DAOBaseMSSQL2(DatabasePersistence):
     def get_read_record_query(self, key_value, c_constraints=None, sub_operation=None):
         # type: (Any,DAOConstraints,str) ->str
         return "select factura_id,factura_fecha,xmin,autoi,tb_factura_item_id from tb_factura4 where autoi = {}".format(key_value)

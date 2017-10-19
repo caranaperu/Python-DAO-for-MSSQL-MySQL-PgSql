@@ -1,14 +1,16 @@
 
 from abc import ABCMeta, abstractmethod
 
-class PersistenceException(Exception): pass
+class PersistenceException(Exception):
+    def __init__(self, msg, persistent_error):
+        super(PersistenceException, self).__init__(msg)
+        self.persistent_error = persistent_error
 
 class PersistenceOperations(object):
     """Clase abstracta define las operaciones validas para accesar a la persistencia."""
 
     __metaclass__ = ABCMeta
 
-    ''' 
     @abstractmethod
     def fetch_records(self, c_constraints=None, sub_operation=None, raw_answers=True, record_type_classname=None):
         """
@@ -27,7 +29,7 @@ class PersistenceOperations(object):
         raw_answers: bool
             Si se desea que la respuesta sea exactamente la devuelta por el driver y no una lista
             de modelos.
-        record_type_classname: Model class type, optional
+        record_type_classname: type Model , optional
             El type de la clase del modelo a usar si se requiere que se retorna una listqa de modelos
             como respuesta.
             Si raw_answers es False este parametro es obligatorio.
@@ -41,14 +43,14 @@ class PersistenceOperations(object):
         Raises
         ------
         PersistenceException
-        PersistenceErrors
-            DB_ERR_SERVERNOTFOUND , si no hay posibilidad de conectarse a la persistencia.
-            DB_ERR_CANTEXECUTE    , Error ejecutando la accion , el error exacto ver en el log.
-            DB_ERR_ALLOK          , Lectura correcta.
+            El  motivo de la excepcion se encuentra en e.persistent_error y puede ser cualquiera
+            de los siguientes:
+                DB_ERR_SERVERNOTFOUND , si no hay posibilidad de conectarse a la persistencia.
+                DB_ERR_CANTEXECUTE    , Error ejecutando la accion , el error exacto ver en el log.
+                DB_ERR_ALLOK          , Lectura correcta.
     
         """
         pass
-    '''
 
     @abstractmethod
     def read_record(self, key_values, record_model, c_constraints=None, sub_operation=None):
