@@ -1,17 +1,12 @@
-import sys
-
-sys.path.insert(0, '/home/carana/PycharmProjects/test')
-
-from TransactionManager import TransactionManager
-from DatabasePersistence import DatabasePersistence
-from DatabaseDelegate import DatabaseDelegate
-from PersistenceErrors import PersistenceErrors
-from Model import Model
+from carlib.database.TransactionManager import TransactionManager
+from carlib.database.DatabasePersistence import DatabasePersistence
+from carlib.database.impl import MsSQLBaseDelegate
+from carlib.persistence.PersistenceErrors import PersistenceErrors
+from carlib.persistence.Model import Model
 import logging
 import random
 import string
 from enum import Enum
-from abc import ABCMeta
 
 logging.basicConfig(
     filename="test.log",
@@ -42,12 +37,13 @@ class MainTableModel(Model):
         Model.__init__(self)
         self.pk_id = None
         self.anytext = None
+        self.version_row = None
 
     def is_pk_uid(self):
         return True
 
     def get_pk_fields(self):
-        None
+        return None
 
 
 class MainTableModelWithFK(Model):
@@ -62,47 +58,16 @@ class MainTableModelWithFK(Model):
         return True
 
     def get_pk_fields(self):
-        None
-
-
-class MSDAODelegate(DatabaseDelegate):
-    __metaclass__ = ABCMeta
-
-    def __init__(self):
-        DatabaseDelegate.__init__(self)
-
-    def is_duplicate_key_error(self, error_msg):
-        # type: (str) -> bool
-        if (error_msg.find("DB-Lib error message 2627, severity 14") >= 0 or error_msg.find(
-                "DB-Lib error message 2601, severity 14") >= 0
-            or error_msg.find('Violation of UNIQUE KEY constraint') >= 0 or error_msg.find(
-            'Cannot insert duplicate key row')) >= 0:
-            return True
-        return False
-
-    def is_foreign_key_error(self, error_msg):
-        # type: (str) -> bool
-
-        # El primer chequeo es para odbc drivers , el otro es para pymssql
-        if ((error_msg.find("DB-Lib error message 547, severity 16") >= 0 and error_msg.find(
-                "FOREIGN KEY constraint") >= 0)
-            or error_msg.find("conflicted with the FOREIGN KEY constraint") >= 0):
-            return True
-        return False
-
-    def get_uid(self, handler):
-        if hasattr(handler, 'lastrowid'):
-            return handler.lastrowid
         return None
 
 
 unique_id_test = True
-driver = 'mssqlpypy'
+driver = 'mssql'
 
 if unique_id_test:
-    query_type_test = QueryType.DIRECT_CALL
+    query_type_test = QueryType.SP_WITH_RETURN_ID
     fl_reread = True
-    withFK = True
+    withFK = False
     verify_dup = True
 
     if not withFK:
@@ -116,23 +81,16 @@ if unique_id_test:
             model.nondup = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
             if verify_dup:
                 model.nondup = 'IsDuplicate11'
-    model.anytext = 'test'
+    model.anytext = 'test_2'
 
-    trx = TransactionManager(driver, {'dsn': 'MSSQLServer', 'host': '192.168.0.9', 'port': '1433',
+    trx = TransactionManager(driver, {'dsn': 'MSSQLServer', 'host': '192.168.0.6', 'port': '1433',
                                       'user': 'sa', 'password': 'melivane', 'database': 'db_pytest'})
 
     if query_type_test == QueryType.DIRECT_CALL:
 
-        class DAODelegateTest(MSDAODelegate):
+        class DAODelegateTest(MsSQLBaseDelegate):
             def __init__(self):
-                MSDAODelegate.__init__(self)
-
-            def get_uid(self, cursor):
-                # Es irrelevante si un trigger inserta a la misma tabla.
-                cursor.execute("select SCOPE_IDENTITY();")
-                lastrowid = cursor.fetchone()[0]
-                print("lastrowid = {}".format(lastrowid))
-                return lastrowid
+                MsSQLBaseDelegate.__init__(self)
 
             def get_read_record_query(self, record_model, key_values, c_constraints=None, sub_operation=None):
                 if not withFK:
@@ -150,14 +108,12 @@ if unique_id_test:
                     else:
                         return "insert into tb_maintable_fk(anytext,fktest,nondup) values ('{}',{},'{}')".format(
                             record_model.anytext, record_model.fktest, record_model.nondup)
-
-
     elif query_type_test == QueryType.DIRECT_SP:
         raise Exception('Unsupported , cant get LAST ID for DIRECT_SP...')
     elif query_type_test == QueryType.SP_WITH_SELECT_ID:
-        class DAODelegateTest(MSDAODelegate):
+        class DAODelegateTest(MsSQLBaseDelegate):
             def __init__(self):
-                MSDAODelegate.__init__(self)
+                MsSQLBaseDelegate.__init__(self)
 
             def get_uid(self, cursor):
                 # El select que contiene el id debera estar antes que cualquier otro select existente en el
@@ -177,9 +133,9 @@ if unique_id_test:
                 return "set nocount on;EXEC withSelectspInsertTest '{}';".format(record_model.anytext)
 
     elif query_type_test == QueryType.SP_WITH_RETURN_ID:
-        class DAODelegateTest(MSDAODelegate):
+        class DAODelegateTest(MsSQLBaseDelegate):
             def __init__(self):
-                MSDAODelegate.__init__(self)
+                MsSQLBaseDelegate.__init__(self)
 
             def get_uid(self, cursor):
                 # Es irrelevante si existen selects antes que el return , siempre se r//ecogera
@@ -202,9 +158,9 @@ if unique_id_test:
                     record_model.anytext)
 
     elif query_type_test == QueryType.SP_WITH_OUTPUT_ID:
-        class DAODelegateTest(MSDAODelegate):
+        class DAODelegateTest(MsSQLBaseDelegate):
             def __init__(self):
-                MSDAODelegate.__init__(self)
+                MsSQLBaseDelegate.__init__(self)
 
             def get_uid(self, cursor):
                 # EL controlador pyodbc o pypyodbc no soportan output parameters , por ende se tiene que simular
@@ -244,7 +200,7 @@ if unique_id_test:
     print(ret)
     print(model.__dict__)
 
-    if verify_dup and ret == PersistenceErrors.DB_ERR_ALLOK:
+    if withFK and verify_dup and ret == PersistenceErrors.DB_ERR_ALLOK:
         model.nondup = 'El segundo 10'
         ret = dao.add_record(model, reread_record=fl_reread)
         print(ret)
@@ -266,9 +222,9 @@ else:
             return ('main_code', 'main_number')
 
 
-    class DAODelegateTest(MSDAODelegate):
+    class DAODelegateTest(MsSQLBaseDelegate):
         def __init__(self):
-            MSDAODelegate.__init__(self)
+            MsSQLBaseDelegate.__init__(self)
 
         def get_read_record_query(self, record_model, key_values, c_constraints=None, sub_operation=None):
             return "select * from tb_maintable_ckeys where main_code='{}' and main_number={} ".format(
@@ -280,12 +236,12 @@ else:
 
 
     model = MainTableModel()
-    model.main_code = '007'
+    model.main_code = '008'
     model.main_number = 7
-    model.anytext = 'Soy 0007'
+    model.anytext = 'Soy 0008'
 
     daoDelegate = DAODelegateTest()
-    trx = TransactionManager(driver, {'dsn': 'MSSQLServer', 'host': '192.168.0.9', 'port': '1433',
+    trx = TransactionManager(driver, {'dsn': 'MSSQLServer', 'host': '192.168.0.6', 'port': '1433',
                                       'user': 'sa', 'password': 'melivane', 'database': 'db_pytest'})
     dao = DatabasePersistence(trx, daoDelegate)
 

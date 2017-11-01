@@ -1,4 +1,3 @@
-import Constraints
 from carlib.utils import cls_locked_attrs
 
 @cls_locked_attrs
@@ -26,8 +25,7 @@ import sys
 
 sys.path.insert(0, '/home/carana/PycharmProjects/test')
 
-from Model import Model
-from PersistenceErrors import PersistenceErrors
+from carlib.persistence.Model import Model
 
 
 def func1(classType):
@@ -37,13 +35,14 @@ def func1(classType):
 
 
 
-from DatabaseDelegate import DatabaseDelegate
-from TransactionManager import TransactionManager
-from DatabasePersistence import DatabasePersistence
+from carlib.database.DatabaseDelegate import DatabaseDelegate
+from carlib.database.TransactionManager import TransactionManager
+from carlib.database.DatabasePersistence import DatabasePersistence
 import logging
 import mem_profile
 import time
-from Constraints import Constraints
+from carlib.persistence.Constraints import Constraints
+from carlib.utils import dbutils
 
 logging.basicConfig(
     filename="test.log",
@@ -51,9 +50,9 @@ logging.basicConfig(
     format="%(asctime)s:%(levelname)s:%(message)s"
 )
 
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 
-driver = 'mysql'
+driver = 'pgsql'
 calltest = False
 
 if driver != 'mssql':
@@ -86,9 +85,9 @@ else:
         def get_pk_fields(self):
             return ('pk_id',)
 
-    # retornar None si no se desea chequeo de version
-    def get_version_field(self):
-        return 'version_row'
+        # retornar None si no se desea chequeo de version
+        def get_version_field(self):
+            return 'version_row'
 
 
 
@@ -126,12 +125,12 @@ class DAODelegateTest(PgSQLDAODelegate):
             if calltest == False:
                 sql = "select * from c_invoice"
                 if c_constraints:
-                    sql = sql + self.process_fetch_conditions(c_constraints)
+                    sql = sql + dbutils.process_fetch_conditions(self.driver_id, c_constraints)
 
-                    if c_constraints.start_row:
-                        sql = sql + " OFFSET " + str(c_constraints.start_row)
-                    if c_constraints.end_row:
-                        sql = sql + " LIMIT " + str(c_constraints.end_row - c_constraints.start_row)
+                    if c_constraints.offset:
+                        sql = sql + " OFFSET " + str(c_constraints.offset)
+                    if c_constraints.limit:
+                        sql = sql + " LIMIT " + str(c_constraints.limit - c_constraints.offset)
             else:
                 self.fetch_definition['call_parameters']=['1009790']
                 sql = "fetch_results"
@@ -144,12 +143,12 @@ class DAODelegateTest(PgSQLDAODelegate):
             else:
                 if c_constraints:
                     sql = "select"
-                    if c_constraints.end_row and c_constraints.start_row == 0:
-                        sql= sql+" top "+str(c_constraints.end_row)+" * from veritrade"
-                    elif c_constraints.end_row-c_constraints.start_row > 0:
+                    if c_constraints.limit and c_constraints.offset == 0:
+                        sql= sql+" top "+str(c_constraints.limit) + " * from veritrade"
+                    elif c_constraints.limit-c_constraints.offset > 0:
                         sql= sql+" * from(select *,row_number() over(order by (select null)) as row from veritrade)m "
-                        sql= sql+" where row between "+str(c_constraints.start_row)+" and "+str(c_constraints.end_row)
-                        sql = sql + self.process_fetch_conditions(c_constraints)
+                        sql= sql+" where row between "+str(c_constraints.offset) + " and " + str(c_constraints.limit)
+                        sql = sql + dbutils.process_fetch_conditions(self.driver_id, c_constraints)
                     else:
                         sql = " * from veritrade"
                 else:
@@ -160,12 +159,12 @@ class DAODelegateTest(PgSQLDAODelegate):
                 sql = "select * from tb_maintable"
 
                 if c_constraints:
-                    sql = sql + self.process_fetch_conditions(c_constraints)
+                    sql = sql + dbutils.process_fetch_conditions(self.driver_id, c_constraints)
 
-                    if c_constraints.end_row:
-                        sql = sql + " LIMIT " + str(c_constraints.end_row - c_constraints.start_row)
-                    if c_constraints.start_row:
-                        sql = sql + " OFFSET " + str(c_constraints.start_row)
+                    if c_constraints.limit:
+                        sql = sql + " LIMIT " + str(c_constraints.limit - c_constraints.offset)
+                    if c_constraints.offset:
+                        sql = sql + " OFFSET " + str(c_constraints.offset)
             else:
                 self.fetch_definition['call_parameters']=['2294']
                 sql = "fetch_results"
@@ -173,63 +172,7 @@ class DAODelegateTest(PgSQLDAODelegate):
         print (sql)
         return sql
 
-    def process_fetch_conditions(self, c_constraints):
-        sql = ""
 
-        if c_constraints:
-            filter_fields = c_constraints.filter_fields
-            if filter_fields:
-                num_fields = len(filter_fields)
-                sql += " where "
-
-                for i, (field, operator) in enumerate(c_constraints.filter_fields.items()):
-                    if num_fields > 1 and i >= 1:
-                        sql = sql + " AND "
-
-                    value = c_constraints.get_filter_field_value(field)
-                    if value is None:
-                        if operator == Constraints.FilterType.EQUAL:
-                            sql = sql + field + " is null"
-                        else:
-                            sql = sql + field + " is not null"
-                    elif (operator == Constraints.FilterType.PARTIAL or
-                                  operator == Constraints.FilterType.IPARTIAL):
-                        sql = sql + field + " " + self.get_filter_operator(operator) + " '%" + str(value) + "%'"
-                    elif isinstance(value, str):
-                        sql += field + self.get_filter_operator(operator) + "'" + str(value) + "'"
-                    elif isinstance(value, bool):
-                        sql += field + self.get_filter_operator(operator) + self.get_as_bool(value)
-                    else:
-                        sql += field + self.get_filter_operator(operator) + str(value)
-
-            sort_fields = c_constraints.sort_fields
-            if sort_fields:
-                num_sort_fields = len(sort_fields)
-
-                if num_sort_fields > 0:
-                    sql += " order by "
-
-                    for i, (field, direction) in enumerate(c_constraints.sort_fields.items()):
-                        if i >= 1:
-                            sql = sql + ","
-                        sql = sql + field + " " + str(direction)
-
-            return sql
-
-    def get_filter_operator(self, filter_type):
-        if driver == 'pgsql':
-            return filter_type.value
-        else:
-            return super(DAODelegateTest, self).get_filter_operator(filter_type)
-
-    def get_as_bool(self, bool_value):
-        if driver == 'pgsql':
-            if bool_value == True:
-                return "'Y'"
-            else:
-                return "'N'"
-        else:
-            return super(DAODelegateTest, self).get_as_bool(bool_value)
 
 
 if driver == 'pgsql':
@@ -249,8 +192,8 @@ print ('Memory (Before): {}Mb'.format(memb))
 t1 = time.clock()
 
 constraint = Constraints()
-constraint.start_row = 0
-constraint.end_row = 100
+constraint.offset = 0
+constraint.limit = 50
 
 if driver == 'pgsql':
     constraint.add_filter_field('issotrx',True,Constraints.FilterType.EQUAL)
@@ -265,12 +208,12 @@ elif driver == 'mssql':
     # Sort
     constraint.add_sort_field('pais_embarque', Constraints.SortType.ASC)
 elif driver == 'mysql':
-    constraint.add_filter_field('anytext','Test',Constraints.FilterType.EQUAL)
+    constraint.add_filter_field('anytext','Test23',Constraints.FilterType.EQUAL)
     constraint.add_filter_field('id_key',40,Constraints.FilterType.GREAT_THAN_EQ)
     # Sort
     constraint.add_sort_field('id_key',Constraints.SortType.ASC)
 
-rows = dao.fetch_records(constraint, raw_answers= True, record_type_classname=MainTableModel)
+rows = dao.fetch_records(constraint, raw_answers= False, record_type_classname=MainTableModel)
 
 t2 = time.clock()
 

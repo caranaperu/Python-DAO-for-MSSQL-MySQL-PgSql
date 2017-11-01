@@ -12,8 +12,8 @@ class Constraints(object):
     Example:
         constraints = Constraints()
 
-        constraints.start_row = 100
-        constraints.end_row = 500
+        constraints.offset = 100
+        constraints.limit = 500
 
         constraints.add_sort_field('field_0', Constraints.SortType.DESC)
         constraints.add_sort_field('field_1', Constraints.SortType.ASC)
@@ -43,6 +43,15 @@ class Constraints(object):
         LESS_THAN = "<"
         LESS_THAN_EQ = "<="
 
+    class CallerOperation(Enum):
+        """Enumeracion con las operaciones validas a asignar caller params."""
+
+        ADD = 'add'
+        DEL = 'del'
+        FETCH = 'fetch'
+        UPD = 'upd'
+        READ = 'read'
+
     def __init__(self):
         """
         Inicializa variables.
@@ -50,15 +59,16 @@ class Constraints(object):
         Todas las variables son inicializadas a None ya que solo seran accesadas via
         metodos (accesors)
         """
-        self.__start_row = None
-        self.__end_row = None
+        self.__offset = None
+        self.__limit = None
         # Privates
         self.__sort_fields = None
         self.__filter_fields = None
         self.__filter_fields_values = None
+        self.__caller_params = None
 
     @property
-    def start_row(self):
+    def offset(self):
         """
         Retorna a partir de que registro se leera en un query.
 
@@ -68,15 +78,14 @@ class Constraints(object):
             El valor o None si no esta definido.
 
         """
-        print("llamado start_row")
-        return self.__start_row
+        return self.__offset
 
-    @start_row.setter
-    def start_row(self, value):
+    @offset.setter
+    def offset(self, value):
         """
-        Metodo que setea el campo privado start_row.
+        Metodo que setea el campo privado offset.
 
-        Si start_row es mayor que end_row no debera limitarse el numero de registros.
+        Si offset es mayor que limit no debera limitarse el numero de registros.
 
         Parameters
         ----------
@@ -88,18 +97,13 @@ class Constraints(object):
         None
 
         """
-        print("llamado set start_row")
         if isinstance(value, int) is True:
-            self.__start_row = value
+            self.__offset = value
         else:
-            self.__start_row = None
-
-    @start_row.deleter
-    def start_row(self):
-        del self.__start_row
+            self.__offset = None
 
     @property
-    def end_row(self):
+    def limit(self):
         """
         Retorna a partir de que registro se leera en un query.
 
@@ -109,14 +113,14 @@ class Constraints(object):
             El valor o None si no esta definido.
 
         """
-        return self.__end_row
+        return self.__limit
 
-    @end_row.setter
-    def end_row(self, value):
+    @limit.setter
+    def limit(self, value):
         """
-        Metodo que setea el campo privado end_row.
+        Metodo que setea el campo privado limit.
 
-        Si start_row es mayor que end_row no debera limitarse el numero de registros.
+        Si offset es mayor que limit no debera limitarse el numero de registros.
 
         Parameters
         ----------
@@ -129,13 +133,9 @@ class Constraints(object):
 
         """
         if isinstance(value, int) is True:
-            self.__end_row = value
+            self.__limit = value
         else:
-            self.__end_row = None
-
-    @end_row.deleter
-    def end_row(self):
-        del self.__end_row
+            self.__limit = None
 
     @property
     def sort_fields(self):
@@ -149,10 +149,6 @@ class Constraints(object):
 
         """
         return deepcopy(self.__sort_fields)
-
-    @sort_fields.deleter
-    def sort_fields(self):
-        del self.__sort_fields
 
     def add_sort_field(self, sort_field, sort_direction=SortType.ASC):
         """
@@ -174,7 +170,7 @@ class Constraints(object):
 
         Raises
         ------
-        AttributeError
+        TypeError
             Si el parametro sort_field no es un string.
             Si el parametro sort_direction no es parte del enum DAOConstraints.SortType
 
@@ -187,10 +183,10 @@ class Constraints(object):
             if type(sort_direction).__name__ == "SortType":
                 self.__sort_fields[sort_field] = sort_direction.value
             else:
-                raise AttributeError(
+                raise TypeError(
                     '{0} is not a valid sort type'.format(sort_direction))
         else:
-            raise AttributeError(
+            raise TypeError(
                 'The sort field ({0}) is not a string'.format(sort_field))
 
     def del_sort_field(self, sort_key_name):
@@ -223,11 +219,7 @@ class Constraints(object):
         """
         return deepcopy(self.__filter_fields)
 
-    @filter_fields.deleter
-    def filter_fields(self):
-        del self.__filter_fields
-
-    def add_filter_field(self, filter_field, filter_value, filter_type):
+    def add_filter_field(self, field_name, field_value, filter_type):
         """
         Agrega un campo de filtro a los constraints indicando su valor y el tipo de filtro.
 
@@ -236,9 +228,9 @@ class Constraints(object):
 
         Parameters
         ----------
-        filter_field: str
+        field_name: str
             Nombre del campo de filtro a agregar al diccionario de campos de filtro.
-        filter_value: Any
+        field_value: Any
             El valor del filtro a aplicar por ejemplo si el tipo de filtro es >= este
             valor podria ser un valor entero como 100.
         filter_type: Constraints.FilterType
@@ -250,9 +242,10 @@ class Constraints(object):
 
         Raises
         ------
-        AttributeError
-            Si el parametro filter_field no es un string.
+        TypeError
+            Si el parametro field_name no es un string.
             Si el parametro filter_type no es parte del enum DAOConstraints.FilterType
+            Si el parametro field_call_order no es entero
 
         """
         # Si no existe creado el diccionario __filter_fields se crea asi como el que
@@ -261,16 +254,16 @@ class Constraints(object):
             self.__filter_fields = {}
             self.__filter_fields_values = {}
 
-        if filter_field is not None and type(filter_field).__name__ == "str":
+        if field_name is not None and type(field_name) is str:
             if type(filter_type).__name__ == "FilterType":
-                self.__filter_fields[filter_field] = filter_type
-                self.__filter_fields_values[filter_field] = filter_value
+                self.__filter_fields[field_name] = filter_type
+                self.__filter_fields_values[field_name] = field_value
             else:
-                raise AttributeError(
+                raise TypeError(
                     '{0} is not a valid filter type'.format(filter_type))
         else:
-            raise AttributeError(
-                'The filter field ({0}) is not a string'.format(filter_field))
+            raise TypeError(
+                'The filter field ({0}) is not a string'.format(field_name))
 
     def del_filter_field(self, filter_key_name):
         """
@@ -300,6 +293,7 @@ class Constraints(object):
             Nombre del campo de filtro que deseamos buscar en la lista de filtros.
 
         Returns
+        -------
         Any
             Con el valor del filtro o None si el filter_key_name no existe en la lista
             de filtros.`
@@ -308,3 +302,89 @@ class Constraints(object):
         if self.__filter_fields_values.get(filter_key_name) is not None:
             return self.__filter_fields_values[filter_key_name]
         return None
+
+    def add_caller_parameter(self, operation, field_value, call_order=None):
+        """
+        Agrega un campo de que sera usado como parametro de entrada en el caso una operacion
+        se soporte en un stored procedure.
+
+        Es conveniente que el orden que se indique no se repita entre caller parameters, ya que
+        de ser asi el orden de estos al ser colocados como parametros del sp sera indeterminado.
+
+        Parameters
+        ----------
+        operation: Constraints.CallerOperation
+            Indicara el tipo de operacion sobre el que tendra efecto este campo.
+        field_value: Any
+            El valor del filtro a aplicar por ejemplo si el tipo de filtro es >= este
+            valor podria ser un valor entero como 100.
+            IMPORTANTE: En el caso que la operacion tenga un modelo definido como en el caso
+                        de add , update aqui podra indicarse el nombre del campo dentro del
+                        modelo y se usara el modelo para extraer el valor del campo.
+        call_order: int
+            Si este campo sera usado como call parameter indicar aqui el orden.
+            Si se indica el mismo orden en varios el orden al ser leido sera inesperado
+            usese siempre valores distintos.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        TypeError
+            Si el parametro operation no es parte del enum Constraints.CallerOperation
+            Si el parametro call_order no es entero
+
+        """
+        # Si no existe creado el diccionario __filter_fields se crea asi como el que
+        # contiene los valores.
+        if type(operation).__name__ != "CallerOperation":
+            raise TypeError(
+                '{0} is not a valid operation'.format(operation))
+
+        if type(call_order) != int:
+            raise TypeError(
+                'call_order parameter need to be an integer')
+
+        if self.__caller_params is None:
+            self.__caller_params = {}
+        if self.__caller_params.get(operation.value) is None:
+            self.__caller_params[operation.value] = []
+
+        self.__caller_params[operation.value].append({'value': field_value, 'call_order': call_order})
+
+    def get_caller_params(self, operation):
+        """
+        Retorna los parametros de stored procedure ordenados para una determinada operacion.
+
+        Parameters
+        ----------
+        operation: Constraints.CallerOperation
+            Indicara el tipo de operacion sobre el que tendra efecto este campo.
+
+        Returns
+        -------
+        list of dict[any,int]
+
+        """
+        cparams = self.__caller_params[operation.value]
+        return sorted(cparams, key=lambda t: t['call_order'])
+
+    @property
+    def caller_params(self):
+        """
+        Metodo property para evitar el acceso directo a la variable __caller_params
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        AttributeError
+            Indicando el acceso no permitido a la variable
+
+        """
+        raise AttributeError(
+            'not allowed direct access to caller params , use get_caller_params instead')

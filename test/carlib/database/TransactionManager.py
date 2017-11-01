@@ -1,8 +1,10 @@
 from collections import defaultdict
-from DatabaseDriverFactory import DatabaseDriverFactory
+
+from carlib.database.DatabaseDriverFactory import DatabaseDriverFactory
 
 
 class TransactionManagerException(Exception): pass
+
 
 class TransactionManager(object):
     """
@@ -104,7 +106,7 @@ class TransactionManager(object):
                         user=self.__db_params['user'],
                         password=self.__db_params['password']
                     )
-            except Exception as ex:
+            except Exception:
                 raise TransactionManagerException(
                     "Cant load driver with parameters dsn={0[dsn]},host={0[host]},port={0[port]},database={0[database]},user={0[user]},password={0[password]}".format(
                         defaultdict(lambda: 'None', self.__db_params)))

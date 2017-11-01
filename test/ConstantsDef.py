@@ -7,5 +7,6 @@ class MetaConst(type):
         print("paso 02")
         raise TypeError
 
+
 class ConstantsDef(object):
     __metaclass__ = MetaConst

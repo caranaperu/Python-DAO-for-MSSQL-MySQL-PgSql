@@ -1,14 +1,9 @@
-import sys
-
-sys.path.insert(0, '/home/carana/PycharmProjects/test')
-
-from TransactionManager import TransactionManager
-from DatabasePersistence import DatabasePersistence
-from DatabaseDelegate import DatabaseDelegate
-from Model import Model
+from carlib.database.TransactionManager import TransactionManager
+from carlib.database.DatabasePersistence import DatabasePersistence
+from carlib.database.impl import PgSQLBaseDelegate
+from carlib.persistence.Constraints import Constraints
+from carlib.persistence.Model import Model
 import logging
-
-from abc import ABCMeta
 
 logging.basicConfig(
     filename="test.log",
@@ -16,6 +11,8 @@ logging.basicConfig(
     format="%(asctime)s:%(levelname)s:%(message)s"
 )
 
+calltest = True
+calltest_execute = True
 
 
 class MainTableModel(Model):
@@ -23,7 +20,7 @@ class MainTableModel(Model):
         Model.__init__(self)
         self.id_key = None
         self.anytext = None
-        self.xmin= None
+        self.xmin = None
 
     def is_pk_uid(self):
         return True
@@ -36,37 +33,16 @@ class MainTableModel(Model):
         return 'xmin'
 
 
-class PgSQLDAODelegate(DatabaseDelegate):
-    __metaclass__ = ABCMeta
-
-    def __init__(self):
-        DatabaseDelegate.__init__(self)
-
-    def is_duplicate_key_error(self, error_msg):
-        if error_msg.find("duplicate key value violates unique constraint") >= 0:
-            return True
-        return False
-
-    def is_foreign_key_error(self, error_msg):
-        # El primer chequeo es para odbc drivers , el otro es para pymssql
-        if error_msg.find("violates foreign key constraint") >= 0:
-            return True
-        return False
-
-    def get_uid(self, handler):
-        if hasattr(handler, 'lastrowid'):
-            return handler.lastrowid
-        return None
-
-
 driver = 'pgsql'
-trx = TransactionManager(driver, {'host': '192.168.0.5','port':'5432', 'user': 'postgres', 'password': 'melivane',
+trx = TransactionManager(driver, {'host': '192.168.0.5', 'port': '5432', 'user': 'postgres', 'password': 'melivane',
                                   'database': 'db_pytest'})
 
 
-class DAODelegateTest(PgSQLDAODelegate):
+class DAODelegateTest(PgSQLBaseDelegate):
     def __init__(self):
-        PgSQLDAODelegate.__init__(self)
+        PgSQLBaseDelegate.__init__(self)
+        if calltest_execute:
+            self.update_definition = {'is_call': True}
 
     def get_uid(self, cursor):
         # La mejor manera que existe en postgres es usar la clausula returning con el id
@@ -84,29 +60,31 @@ class DAODelegateTest(PgSQLDAODelegate):
     def get_read_record_query(self, record_model, key_values, c_constraints=None, sub_operation=None):
         return "select *,xmin from tb_maintable where id_key={}".format(key_values)
 
-    def get_add_record_query(self, record_model, c_constraints=None, sub_operation=None):
-        return "insert into tb_maintable(id_key,anytext) values (DEFAULT,'{}') returning id_key".format(record_model.anytext)
+    def get_update_record_query(self, record_model, c_constraints=None, sub_operation=None):
+        if calltest_execute:
+            return "dpupdatetest"
+        elif calltest:
+            return "select dpupdatetest({},'{}');".format(record_model.id_key, record_model.anytext)
+        else:
+            return "update tb_maintable set anytext = '{}' where id_key = {}".format(record_model.anytext,
+                                                                                     record_model.id_key)
 
-    def get_update_record_query(self, record_model, sub_operation=None):
-        return "update tb_maintable set anytext = '{}' where id_key = {}".format(record_model.anytext,record_model.id_key)
-        #return "select dpupdatetest({},'{}');".format(record_model.id_key,record_model.anytext)
 
 model = MainTableModel()
-model.anytext = 'testchang5'
-model.id_key = 1
-model.xmin = 124226
+model.anytext = 'testchang4'
+model.id_key = 5
+model.xmin = 128951
+
+constraints = None
+if calltest_execute:
+    constraints = Constraints()
+    constraints.add_caller_parameter(Constraints.CallerOperation.UPD, 'id_key', 0)
+    constraints.add_caller_parameter(Constraints.CallerOperation.UPD, 'anytext', 0)
 
 daoDelegate = DAODelegateTest()
-
-# daoDelegate.set_add_definition()
-# daoDelegate.set_read_definition()
-
 dao = DatabasePersistence(trx, daoDelegate)
 
 # usamos la transacion para informar que el control es extrerno.
-ret = dao.update_record(model)
+ret = dao.update_record(model, c_constraints=constraints)
 print(ret)
 print(model.__dict__)
-
-
-

@@ -1,3 +1,5 @@
+from carlib.persistence.Constraints import Constraints
+
 my_string = "%i + %i = %i" % (1,2,3)
 string_two = "my homework!"
 string_3 = my_string+string_two
@@ -134,8 +136,6 @@ if __name__ == "__main__":
         csv_reader(f_obj)
 
 
-
-
 print("\n\n")
 print("================\n\n")
 import csv
@@ -151,3 +151,71 @@ def csv_dict_reader(file_obj):
 if __name__ == "__main__":
     with open("/home/carana/Derco/veritrade_autos_06_2017_final.csv") as f_obj:
         csv_dict_reader(f_obj)
+
+
+d1 ={
+    'test1': {'f1':'field1','value':'3241'},
+    'test2': {'f2':'field2','value2': '3242'},
+}
+
+print()
+d1={}
+d1['test1'] = {'value':1234,'operator':'and', 'call_order': 0}
+d1['test2'] = {'value':1235,'operator':'or', 'call_order': 1}
+
+print(d1['test1']['value'])
+print(d1['test2']['value'])
+
+d2 = {'test1':2,'test2':1,'test3':0}
+from collections  import OrderedDict
+d3 = OrderedDict(sorted(d2.items(), key=lambda t: t[1]))
+
+for f,o in d3.items():
+    print(f)
+    print(o)
+
+t1={}
+t1['add'] =[]
+t1['add'].append({'value':1235, 'call_order': 2})
+t1['add'].append({'value':1236, 'call_order': 1})
+
+t1['del'] = []
+t1['del'].append({'value':123, 'call_order': 2})
+t1['del'].append({'value':126, 'call_order': 1})
+
+#t1['add']['the_field_name_1'].add({'value':1235,'operator':'or', 'call_order': 1})
+#t1['add']['the_field_name_2'].add({'value':1236,'operator':'and', 'call_order': 2})
+#t1['add']['the_field_name_2'].add({'value':1236,'operator':'and', 'call_order': 2})
+
+print("===============================================")
+print("===============================================")
+
+
+tadd = t1['add']
+print(tadd[0])
+print(tadd[0]['value'])
+
+print("===============================================")
+print("===============================================")
+for row in tadd:
+    print(row['value'])
+
+d4 = sorted(tadd, key=lambda t: t['call_order'])
+
+for f in d4:
+    print(f)
+    print(f['value'])
+
+print("===============================================")
+print("===============================================")
+for row in tadd:
+    print(row['value'])
+
+constaints = Constraints()
+constaints.add_caller_parameter(Constraints.CallerOperation.ADD,100,1)
+constaints.add_caller_parameter(Constraints.CallerOperation.ADD,'fieldvalue',0)
+
+params = constaints.get_caller_params(Constraints.CallerOperation.ADD)
+for f in params:
+    print(f['value'])
+    print(f['call_order'])

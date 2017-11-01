@@ -1,14 +1,9 @@
-import sys
-
-sys.path.insert(0, '/home/carana/PycharmProjects/test')
-
-from TransactionManager import TransactionManager
-from DatabasePersistence import DatabasePersistence
-from DatabaseDelegate import DatabaseDelegate
-from Model import Model
+from carlib.database.TransactionManager import TransactionManager
+from carlib.database.DatabasePersistence import DatabasePersistence
+from carlib.database.impl import PgSQLBaseDelegate
 import logging
 
-from abc import ABCMeta
+from carlib.persistence.Constraints import Constraints
 
 logging.basicConfig(
     filename="test.log",
@@ -16,40 +11,22 @@ logging.basicConfig(
     format="%(asctime)s:%(levelname)s:%(message)s"
 )
 
-test = 'without_uid'
-test = 'del_fk'
+# test = 'without_uid'
+# test = 'del_fk'
+test = 'normal'
 
-class PgSQLDAODelegate(DatabaseDelegate):
-    __metaclass__ = ABCMeta
-
-    def __init__(self):
-        DatabaseDelegate.__init__(self)
-
-    def is_duplicate_key_error(self, error_msg):
-        if error_msg.find("duplicate key value violates unique constraint") >= 0:
-            return True
-        return False
-
-    def is_foreign_key_error(self, error_msg):
-        # El primer chequeo es para odbc drivers , el otro es para pymssql
-        if error_msg.find("violates foreign key constraint") >= 0:
-            return True
-        return False
-
-    def get_uid(self, handler):
-        if hasattr(handler, 'lastrowid'):
-            return handler.lastrowid
-        return None
-
+calltest = True
 
 driver = 'pgsql'
-trx = TransactionManager(driver, {'host': '192.168.0.5','port':'5432', 'user': 'postgres', 'password': 'melivane',
+trx = TransactionManager(driver, {'host': '192.168.0.5', 'port': '5432', 'user': 'postgres', 'password': 'melivane',
                                   'database': 'db_pytest'})
 
 
-class DAODelegateTest(PgSQLDAODelegate):
+class DAODelegateTest(PgSQLBaseDelegate):
     def __init__(self):
-        PgSQLDAODelegate.__init__(self)
+        PgSQLBaseDelegate.__init__(self)
+        if calltest:
+            self.delete_definition={'is_call': True}
 
     def get_uid(self, cursor):
         # La mejor manera que existe en postgres es usar la clausula returning con el id
@@ -70,38 +47,55 @@ class DAODelegateTest(PgSQLDAODelegate):
         elif test == 'del_fk':
             return "select * from tb_testfk where fktest={}".format(key_values)
         else:
-            return "select * from tb_maintable_ckeys where main_code = '{}' and main_number = {}".format(key_values[0],key_values[1])
+            return "select * from tb_maintable_ckeys where main_code = '{}' and main_number = {}".format(key_values[0],
+                                                                                                         key_values[1])
 
-    def get_add_record_query(self, record_model, c_constraints=None, sub_operation=None):
-        return "insert into tb_maintable(id_key,anytext) values (DEFAULT,'{}') returning id_key".format(record_model.anytext)
-
-    def get_update_record_query(self, record_model, sub_operation=None):
-        return "update tb_maintable set anytext = '{}' where id_key = {}".format(record_model.anytext,record_model.id_key)
-
-    def get_delete_record_query(self, key_values):
+    def get_delete_record_query(self, key_values, c_constraints=None, sub_operation=None):
         if test == 'normal':
-            return "delete from tb_maintable where id_key = {}".format(key_values)
+            if calltest:
+                return 'dpdeletetest'
+            else:
+                return "delete from tb_maintable where id_key = {}".format(key_values)
         elif test == 'del_fk':
-            return "delete from tb_testfk where fktest = {}".format(key_values)
+            if calltest:
+                return 'dpdeletetest_fk'
+            else:
+                return "delete from tb_testfk where fktest = {}".format(key_values)
         else:
-            return "delete from tb_maintable_ckeys where main_code = '{}' and main_number = {}".format(key_values[0],key_values[1])
+            if calltest:
+                return 'dpdeletetest_ckeys'
+            else:
+                return "delete from tb_maintable_ckeys where main_code = '{}' and main_number = {}".format(key_values[0],
+                                                                                                       key_values[1])
 
 
 daoDelegate = DAODelegateTest()
 
-# daoDelegate.set_add_definition()
-# daoDelegate.set_read_definition()
-
 dao = DatabasePersistence(trx, daoDelegate)
 
+constraints = None
+if calltest:
+    constraints = Constraints()
+
 # usamos la transacion para informar que el control es extrerno.
+# IMPORTANTE:
+# Si usa sp para eliminar y verified_delete_check es true el parametro
+# key_values deben ser iguales a lo de los caller params en los constraints.
+
 if test == 'normal':
-    ret = dao.delete_record(1)
+    key = 15
+    if calltest:
+        constraints.add_caller_parameter(Constraints.CallerOperation.DEL,key,0)
+    ret = dao.delete_record(key,c_constraints=constraints)
 elif test == 'del_fk':
-    ret = dao.delete_record(1)
+    key = 1
+    if calltest:
+        constraints.add_caller_parameter(Constraints.CallerOperation.DEL,key,0)
+    ret = dao.delete_record(key,c_constraints=constraints)
 else:
-    ret = dao.delete_record(('008',8))
+    key=('010', 11)
+    if calltest:
+        constraints.add_caller_parameter(Constraints.CallerOperation.DEL,key[0],0)
+        constraints.add_caller_parameter(Constraints.CallerOperation.DEL, key[1], 0)
+    ret = dao.delete_record(key,c_constraints=constraints)
 print(ret)
-
-
-

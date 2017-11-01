@@ -1,17 +1,13 @@
-import sys
-
-sys.path.insert(0, '/home/carana/PycharmProjects/test')
-
-from TransactionManager import TransactionManager
-from DatabasePersistence import DatabasePersistence
-from DatabaseDelegate import DatabaseDelegate
-from PersistenceErrors import PersistenceErrors
-from Model import Model
+from carlib.persistence.Constraints import Constraints
+from carlib.database.TransactionManager import TransactionManager
+from carlib.database.DatabasePersistence import DatabasePersistence
+from carlib.database.impl import MySQLBaseDelegate
+from carlib.persistence.PersistenceErrors import PersistenceErrors
+from carlib.persistence.Model import Model
 import logging
 import random
 import string
 from enum import Enum
-from abc import ABCMeta
 
 logging.basicConfig(
     filename="test.log",
@@ -57,30 +53,6 @@ class MainTableModelWithFK(Model):
         return True
 
     def get_pk_fields(self):
-        None
-
-
-class MySQLDAODelegate(DatabaseDelegate):
-    __metaclass__ = ABCMeta
-
-    def __init__(self):
-        DatabaseDelegate.__init__(self)
-
-    def is_duplicate_key_error(self, error_msg):
-        if error_msg.find("(23000): Duplicate entry") >= 0:
-            return True
-        return False
-
-    def is_foreign_key_error(self, error_msg):
-        # El primer chequeo es para odbc drivers , el otro es para pymssql
-        if (error_msg.find("conflicted with the FOREIGN KEY constraint") >= 0
-                or error_msg.find("a foreign key constraint fails") >= 0):
-            return True
-        return False
-
-    def get_uid(self, handler):
-        if hasattr(handler, 'lastrowid'):
-            return handler.lastrowid
         return None
 
 
@@ -88,7 +60,7 @@ unique_id_test = True
 driver = 'mysql'
 
 if unique_id_test:
-    query_type_test = QueryType.DIRECT_CALL
+    query_type_test = QueryType.SP_WITH_OUTPUT_ID
     fl_reread = True
     withFK = False
     verify_dup = False
@@ -100,20 +72,20 @@ if unique_id_test:
             raise ValueError('No es necesaria esta prueba basta el caso DIRECT_CALL')
         else:
             model = MainTableModelWithFK()
-            model.fktest = 1 # 1 - es ok , 2- genera error de foreign key
+            model.fktest = 1  # 1 - es ok , 2- genera error de foreign key
             model.nondup = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
             if verify_dup:
-                model.nondup = 'IsDuplicate22'
-    model.anytext = 'test'
+                model.nondup = 'IsDuplicate23'
+    model.anytext = 'test23'
 
     trx = TransactionManager(driver, {'host': 'localhost', 'port': '3306',
                                       'user': 'root', 'password': 'melivane', 'database': 'py_dbtest'})
 
     if query_type_test == QueryType.DIRECT_CALL:
 
-        class DAODelegateTest(MySQLDAODelegate):
+        class DAODelegateTest(MySQLBaseDelegate):
             def __init__(self):
-                MySQLDAODelegate.__init__(self)
+                MySQLBaseDelegate.__init__(self)
 
             def get_uid(self, cursor):
                 # Es independiente del trigger, mas aun cuando aqui el trigger no puede insertar a la misma
@@ -137,18 +109,18 @@ if unique_id_test:
                         record_model.anytext, record_model.fktest, record_model.nondup)
 
     elif query_type_test == QueryType.DIRECT_SP:
-        class DAODelegateTest(MySQLDAODelegate):
+        class DAODelegateTest(MySQLBaseDelegate):
             def __init__(self):
-                MySQLDAODelegate.__init__(self)
-                self.add_definition = {'is_call': True, 'call_parameters': ['anytext']}
+                MySQLBaseDelegate.__init__(self)
+                self.add_definition = {'is_call': True}
 
             def get_uid(self, cursor):
                 # El stored procedure debe hacer solo insert a la tabla que se requeire el id o el insert debe ser
                 # el ultimo dentro del sp, es irrelevante si tiene selects o no ya que seran ignorados.
                 # IMPORTANTE : Si se hace mas de un insert en la misma tabla el id sera del ultimo insert
                 #   esto es absolutamente raro en produccion , pero valga la advertencia.
-                # En el caso se agrege a otras tablas debera usarse otro type mas adecuado, la idea aqui es que solo se agregue
-                # a la tabla de interes en el sp.
+                # En el caso se agrege a otras tablas debera usarse otro type mas adecuado, la idea aqui es
+                # que solo se agregue a la tabla de interes en el sp.
                 #
                 # El last insert id no toma en cuenta lo que suceda dentro de un trigger.
                 #
@@ -174,10 +146,10 @@ if unique_id_test:
                         record_model.anytext, record_model.fktest, record_model.nondup)
 
     elif query_type_test == QueryType.SP_WITH_SELECT_ID:
-        class DAODelegateTest(MySQLDAODelegate):
+        class DAODelegateTest(MySQLBaseDelegate):
             def __init__(self):
-                MySQLDAODelegate.__init__(self)
-                self.add_definition = {'is_call': True, 'call_parameters': ['anytext']}
+                MySQLBaseDelegate.__init__(self)
+                self.add_definition = {'is_call': True}
 
             def get_uid(self, cursor):
                 # El select que contiene el id debera ser el ultimo existente en el stored procedure de lo contrario
@@ -209,9 +181,9 @@ if unique_id_test:
                         record_model.anytext, record_model.fktest, record_model.nondup)
 
     elif query_type_test == QueryType.SP_WITH_RETURN_ID:
-        class DAODelegateTest(MySQLDAODelegate):
+        class DAODelegateTest(MySQLBaseDelegate):
             def __init__(self):
-                MySQLDAODelegate.__init__(self)
+                MySQLBaseDelegate.__init__(self)
 
             def get_uid(self, cursor):
                 # En mysql para retornar un valor via return y no select , solo es valido via una funcion,
@@ -226,13 +198,14 @@ if unique_id_test:
                 return "select * from tb_maintable where id_key={}".format(key_values)
 
             def get_add_record_query(self, record_model, c_constraints=None, sub_operation=None):
+                # withReturnspInsertTest es function
                 return "select withReturnspInsertTest('{}')".format(record_model.anytext)
 
     elif query_type_test == QueryType.SP_WITH_OUTPUT_ID:
-        class DAODelegateTest(MySQLDAODelegate):
+        class DAODelegateTest(MySQLBaseDelegate):
             def __init__(self):
-                MySQLDAODelegate.__init__(self)
-                self.add_definition = {'is_call': True, 'call_parameters': ['anytext', '0']}
+                MySQLBaseDelegate.__init__(self)
+                self.add_definition = {'is_call': True}
 
             def get_uid(self, cursor):
                 # En la interfase python de mysql no existe una manera standard de recoger los output params
@@ -251,23 +224,25 @@ if unique_id_test:
             def get_add_record_query(self, record_model, c_constraints=None, sub_operation=None):
                 return "withOutParamInsertTest"
 
-    daoDelegate = DAODelegateTest()
+    constraints = Constraints()
+    constraints.add_caller_parameter(Constraints.CallerOperation.ADD, 'anytext', 1)
+    if query_type_test == QueryType.SP_WITH_OUTPUT_ID:
+        constraints.add_caller_parameter(Constraints.CallerOperation.ADD, '0', 2)
 
-    # daoDelegate.set_add_definition()
-    # daoDelegate.set_read_definition()
+    daoDelegate = DAODelegateTest()
 
     dao = DatabasePersistence(trx, daoDelegate)
 
     # usamos la transacion para informar que el control es extrerno.
     if verify_dup:
         trx.start_transaction()
-    ret = dao.add_record(model, reread_record=fl_reread)
+    ret = dao.add_record(model, reread_record=fl_reread, c_constraints=constraints)
     print(ret)
     print(model.__dict__)
 
     if verify_dup and ret == PersistenceErrors.DB_ERR_ALLOK:
-        model.nondup = 'El segundo 22'
-        ret = dao.add_record(model, reread_record=fl_reread)
+        model.nondup = 'El segundo 32'
+        ret = dao.add_record(model, reread_record=fl_reread, c_constraints=constraints)
         print(ret)
         print(model.__dict__)
 
@@ -289,9 +264,9 @@ else:
             return ('main_code', 'main_number')
 
 
-    class DAODelegateTest(MySQLDAODelegate):
+    class DAODelegateTest(MySQLBaseDelegate):
         def __init__(self):
-            MySQLDAODelegate.__init__(self)
+            MySQLBaseDelegate.__init__(self)
 
         def get_read_record_query(self, record_model, key_values, c_constraints=None, sub_operation=None):
             return "select * from tb_maintable_ckeys where main_code='{}' and main_number={} ".format(

@@ -1,10 +1,11 @@
-
 from abc import ABCMeta, abstractmethod
+
 
 class PersistenceException(Exception):
     def __init__(self, msg, persistent_error):
         super(PersistenceException, self).__init__(msg)
         self.persistent_error = persistent_error
+
 
 class PersistenceOperations(object):
     """Clase abstracta define las operaciones validas para accesar a la persistencia."""
@@ -94,7 +95,7 @@ class PersistenceOperations(object):
         record_model: Model
             El modelo de datos conteniendo los datos a agregar.
         c_constraints: Constraints , optional
-            Los constraints a aplicar al selector (query) a usarse para obtener el registro.
+            Los constraints a aplicar al selector (query) a usarse para agregar el registro.
         sub_operation: str , optional
             cualquier string que describa una sub operacion a ejecutar , por ejemplo :
             "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
@@ -117,7 +118,7 @@ class PersistenceOperations(object):
         pass
 
     @abstractmethod
-    def update_record(self, record_model, sub_operation=None, reread_record=True):
+    def update_record(self, record_model, c_constraints=None, sub_operation=None, reread_record=True):
         """
         Metodo el cual sera implementado para actualizar un registro en la persistencia.
 
@@ -125,6 +126,8 @@ class PersistenceOperations(object):
         ----------
         record_model: Model
             El modelo de datos conteniendo los datos a actualizar.
+        c_constraints: Constraints , optional
+            Los constraints a aplicar al selector (query) a usarse para actualizar el registro.
         sub_operation: str , optional
             cualquier string que describa una sub operacion a ejecutar , por ejemplo :
             "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
@@ -150,7 +153,7 @@ class PersistenceOperations(object):
         pass
 
     @abstractmethod
-    def delete_record(self, key_values, verified_delete_check=True):
+    def delete_record(self, key_values, verified_delete_check=True, c_constraints=None, sub_operation=None):
         """
         Metodo el cual sera implementado para la eliminacion de un registro en la persistencia.
 
@@ -162,6 +165,12 @@ class PersistenceOperations(object):
         verified_delete_check: bool , default True
             Si es true , se verificara que la version del registro no haya cambiado antes de
             eliminarse.
+        c_constraints: Constraints , optional
+            Los constraints a aplicar al selector (query) a usarse para eliminar el registro.
+        sub_operation: str , optional
+            cualquier string que describa una sub operacion a ejecutar , por ejemplo :
+            "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
+            implementaciones especficas de este metodo.
 
         Returns
         -------
@@ -205,6 +214,7 @@ class PersistenceOperations(object):
     de error es unico en vada uno de los casos , enviamos el mensaje de la excepcion para
     se parsee y se determine si existe el error.
     """
+
     @abstractmethod
     def is_duplicate_key_error(self, error_msg):
         """

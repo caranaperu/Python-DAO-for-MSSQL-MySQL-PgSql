@@ -319,7 +319,7 @@ class PersistenceDelegate(object):
         pass
 
     @abstractmethod
-    def get_update_record_query(self, record_model, sub_operation=None):
+    def get_update_record_query(self, record_model, c_constraints=None, sub_operation=None):
         """
         Retorna la definicion para efectuar un update a un registro a la persistencia.
 
@@ -327,6 +327,8 @@ class PersistenceDelegate(object):
         ----------
         record_model: Model
             El modelo de datos con los datos del registro a actualizar.
+        c_constraints: Constraints , optional
+            Los constraints a aplicar al selector (query) a usarse para actualizar el registro.
         sub_operation: str, optional
             cualquier string que describa una sub operacion a ejecutar , por ejemplo :
             "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
@@ -342,7 +344,7 @@ class PersistenceDelegate(object):
         pass
 
     @abstractmethod
-    def get_delete_record_query(self, key_values):
+    def get_delete_record_query(self, key_values, c_constraints=None, sub_operation=None):
         """
         Retorna la definicion para efectuar un delete a un registro a la persistencia.
 
@@ -351,6 +353,12 @@ class PersistenceDelegate(object):
         key_values: int or tuple[any]
             Si es entero representara el unique id de lo contrario sera un tuple con la lista de
             nombre de los campos que componen la llave unica que identifica un registro.
+        c_constraints: Constraints , optional
+            Los constraints a aplicar al selector (query) a usarse para eliminar el registro.
+        sub_operation: str, optional
+            cualquier string que describa una sub operacion a ejecutar , por ejemplo :
+            "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
+            implementaciones especficas de este metodo.
 
         Returns
         -------
@@ -464,7 +472,7 @@ class PersistenceDelegate(object):
         """
         pass
 
-    def execute_update(self, handler, record_model, sub_operation=None):
+    def execute_update(self, handler, record_model, c_constraints=None, sub_operation=None):
         """
         Metodo el cual sera implementado para actualizar un registro a la persistencia.
 
@@ -475,6 +483,8 @@ class PersistenceDelegate(object):
             Si la persistencia es una base de datos , este seria por ejemplo el cursor.
         record_model: Model
             El modelo de datos con los datos del registro a agregar.
+        c_constraints: Constraints , optional
+            Los constraints a aplicar al selector (query) a usarse para obtener el registro.
         sub_operation: str, optional
             cualquier string que describa una sub operacion a ejecutar , por ejemplo :
             "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
@@ -488,7 +498,7 @@ class PersistenceDelegate(object):
         """
         pass
 
-    def execute_delete(self, handler, key_values):
+    def execute_delete(self, handler, key_values, c_constraints=None, sub_operation=None):
         """
         Metodo el cual sera implementado para eliminar un registro a la persistencia.
 
@@ -500,6 +510,12 @@ class PersistenceDelegate(object):
         key_values: int or tuple[str]
             Si es entero representara el unique id de lo contrario sera un tuple con la lista de
             nombre de los campos que componen la llave unica que identifica un registro.
+        c_constraints: Constraints , optional
+            Los constraints a aplicar al selector (query) a usarse para eliminar el registro.
+        sub_operation: str, optional
+            cualquier string que describa una sub operacion a ejecutar , por ejemplo :
+            "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
+            implementaciones especficas de este metodo.
 
         Returns
         -------

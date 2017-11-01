@@ -1,11 +1,11 @@
-# from abc import ABCMeta
 import logging
-from PersistenceErrors import PersistenceErrors
-from PersistenceOperations import *
-from TransactionManager import TransactionManager
-from DatabaseDelegate import DatabaseDelegate
-from Model import Model
 from copy import deepcopy
+
+from TransactionManager import TransactionManager
+from carlib.database.DatabaseDelegate import DatabaseDelegate
+from carlib.persistence.Model import Model
+from carlib.persistence.PersistenceErrors import PersistenceErrors
+from carlib.persistence.PersistenceOperations import *
 
 
 class DatabasePersistence(PersistenceOperations):
@@ -55,24 +55,33 @@ class DatabasePersistence(PersistenceOperations):
                 'trx_mgr parameter need to be an instance of TransactionManager')
 
         # El dao delegate es opcional , pero de estar definido debe ser del tipo
-        # DAODelegate.
+        # DatabaseDelegate.
         self.__db_delegate = None
         if db_delegate:
             if isinstance(db_delegate, DatabaseDelegate):
                 self.__db_delegate = db_delegate
+                # seteamos al delegate sobre que driver funciona
+                self.__db_delegate.driver_id = self.__trx_mgr.db_driver_id
             else:
                 raise ValueError(
                     'db_delegate parameter need to be an instance of DatabaseDelegate')
+        else:
+            raise ValueError('db_delegate need to be defined')
 
     def read_record(self, key_values, record_model, c_constraints=None, sub_operation=None):
         """
         Metodo para la lectura de un registro en la base de datos.
 
+        En el caso se use stored procedures la implementacion default no usara los key_values
+        y mas bien usara los constraints y los call parameters definidos en los mismos.
+
         Parameters
         ----------
-        key_values: int or tuple[str]
+        key_values: int or tuple[str] or None
             Si es entero representara el unique id de lo contrario sera un tuple con la lista de
             nombre de los campos que componen la llave unica que identifica un registro.
+            Sera None si se lee el registro via stored procedure ya que en ese caso se obtendran
+            los call parameters de los constraints.
         record_model: Model
             El modelo de datos destino de los datos obtenidos, si es None la lectura solo servira como
             verificacion de existencia del registro.
@@ -103,16 +112,34 @@ class DatabasePersistence(PersistenceOperations):
         ret_value = None
 
         try:
+
             # Open the transaction
             cursor = self.__trx_mgr.get_transaction_cursor()
 
             self.__db_delegate.execute_read(cursor, record_model, key_values, c_constraints, sub_operation)
 
+            fields_description = None
+            rows = None
+
+            # Punto 1
+            # Dado que el driver de mysql soportado y al hecho de un query via callproc
+            # bajo ese driver reporta las respuestas de manera no standard a traves de
+            # stored_results, verificamos si exsten respuestas en dicho lugar , de no
+            # encontrar nada procedemos de la manera habitual.
+            if hasattr(cursor, 'stored_results'):
+                for result in cursor.stored_results():
+                    rows = result.fetchall()
+                    fields_description = result.description
+
+            # Si no hay respuestas encontradas pasamos al metodo normal.
+            if rows is None:
+                rows = cursor.fetchall()
+                fields_description = cursor.description
+
             # Usamos este metodo en este caso ya que algunos drivers no devuelven el
             # numero de filas afectadas en forma correcta.
             # Hay que aclarar que esperamos un solo registro de respuesta por ende no hay riesgo
             # en usar fetchall y al menos nos garantizara tener el numero correcto de respuestas.
-            rows = cursor.fetchall()
             rowcount = 0
             if rows:
                 rowcount = len(rows)
@@ -124,9 +151,9 @@ class DatabasePersistence(PersistenceOperations):
             if rowcount == 1:
                 encodetype = self.__trx_mgr.encoding()
                 if encodetype:
-                    columns = [i[0].encode(encodetype).rstrip('\x00') for i in cursor.description]
+                    columns = [i[0].encode(encodetype).rstrip('\x00') for i in fields_description]
                 else:
-                    columns = [i[0] for i in cursor.description]
+                    columns = [i[0] for i in fields_description]
 
                 for col in columns:
                     print(col)
@@ -143,7 +170,7 @@ class DatabasePersistence(PersistenceOperations):
             else:
                 sql = self.__db_delegate.get_read_record_query(record_model, key_values, c_constraints, sub_operation)
                 logging.debug(
-                    "Too many records {} results for read a record with query - {}".format(cursor.rowcount, sql))
+                    "Too many records {} results for read a record with query - {}".format(rowcount, sql))
                 ret_value = PersistenceErrors.DB_ERR_TOOMANYRESULTS
         except Exception as ex:
             sql = self.__db_delegate.get_read_record_query(record_model, key_values, c_constraints, sub_operation)
@@ -169,6 +196,8 @@ class DatabasePersistence(PersistenceOperations):
             El modelo de datos conteniendo los datos a agregar.
         c_constraints: Constraints , optional
             Los constraints a aplicar al selector (query) a usarse para agregar el registro.
+            Basicamente sera usado si el add es realizado via stored procedure y se tomaran los
+            caller parameters desde los mismos.
         sub_operation: str , optional
             cualquier string que describa una sub operacion a ejecutar , por ejemplo :
             "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
@@ -243,19 +272,33 @@ class DatabasePersistence(PersistenceOperations):
                 self.__trx_mgr.end_transaction()
         return ret_value
 
-    def delete_record(self, key_values, verified_delete_check=True):
+    def delete_record(self, key_values, verified_delete_check=True, c_constraints=None, sub_operation=None):
         """
         Metodo para la eliminacion de un registro en la base de datos.
 
+        Si usa para eliminar un stored procedure y verified_delete_check es True tanto los
+        key_values como los caller params constraints DEBEN SER IGUALES, si verified_delete_check
+        es False los ke_values son irrelevantes.
+
         Parameters
         ----------
-        key_values: int or tuple[any]
+        key_values: int or tuple[any] or None
             Si es entero representara el unique id de lo contrario sera un tuple con la lista de
             de los valores de los campos que componen la llave unica que identifica un registro.
+            Podra ser None si se usan los constraints.
         verified_delete_check: bool , default True
             Si es true , se verificara que la version del registro no haya cambiado antes de
             eliminarse.
-
+        c_constraints: Constraints , optional
+            Los constraints a aplicar al selector (query) a usarse para eliminar el registro.
+            Basicamente seran tomados en la implementacion default solo en el caso que se elimine
+            via stored procedure y se extraeran de alli los caller parameters.
+            No seran opcionales si se indica verified_delete_check=True y la lectura del registro
+            a eliminar sea un stored procedure.
+        sub_operation: str , optional
+            cualquier string que describa una sub operacion a ejecutar , por ejemplo :
+            "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
+            implementaciones especficas de este metodo.
         Returns
         -------
         PersistenceErrors
@@ -279,18 +322,18 @@ class DatabasePersistence(PersistenceOperations):
             # Open the transaction
             cursor = self.__trx_mgr.get_transaction_cursor()
 
-                # relectura.
+            # relectura.
             if verified_delete_check:
-                ret_value = self.read_record(key_values, None)
+                ret_value = self.read_record(key_values, None, c_constraints)
 
             if ret_value == PersistenceErrors.DB_ERR_ALLOK:
                 # delete record
-                self.__db_delegate.execute_delete(cursor, key_values)
+                self.__db_delegate.execute_delete(cursor, key_values, c_constraints)
             else:
                 return ret_value
 
         except Exception as ex:
-            sql = self.__db_delegate.get_delete_record_query(key_values)
+            sql = self.__db_delegate.get_delete_record_query(key_values, c_constraints)
 
             if self.is_foreign_key_error(str(ex)):
                 logging.debug(
@@ -309,7 +352,7 @@ class DatabasePersistence(PersistenceOperations):
                 self.__trx_mgr.end_transaction()
         return ret_value
 
-    def update_record(self, record_model, sub_operation=None, reread_record=True):
+    def update_record(self, record_model, sub_operation=None, c_constraints=None, reread_record=True):
         """
         Metodo para actualizar un registro en la base de datos.
 
@@ -324,12 +367,17 @@ class DatabasePersistence(PersistenceOperations):
         del registro , no existe forma standard de hacerlo , en pgsql por ejemplo xmin
         puede ser usado para esto , en otras bases puede ser un timestamp o rowversion.
 
-        Si ademas se desea releer los datos al final usar el parametro reread_record
+        Si ademas se desea releer los datos al final usar el parametro reread_record.
+
 
         Parameters
         ----------
         record_model: Model
             El modelo de datos conteniendo los datos a actualizar.
+        c_constraints: Constraints , optional
+            Los constraints a aplicar al selector (query) a usarse para actualizar el registro.
+            Si el update es via stored procedure debera indicarse los parametros via los constraints
+            y los correspondientes caller parameters.
         sub_operation: str , optional
             cualquier string que describa una sub operacion a ejecutar , por ejemplo :
             "forSelectionList","onlyDates", este valor es libre y sera interpretado por las
@@ -385,7 +433,7 @@ class DatabasePersistence(PersistenceOperations):
                     # Copia para no alterar el original
                     record_model_to_read = deepcopy(record_model)
                     # lectura para verificacion de version
-                    ret_value = self.read_record(pk_keys, record_model_to_read)
+                    ret_value = self.read_record(pk_keys, record_model_to_read, c_constraints)
 
                     if ret_value == PersistenceErrors.DB_ERR_ALLOK:
                         # Comparamos la version original vs el recientemente leido
@@ -398,11 +446,11 @@ class DatabasePersistence(PersistenceOperations):
 
             if ret_value == PersistenceErrors.DB_ERR_ALLOK:
                 # update record
-                self.__db_delegate.execute_update(cursor, record_model, sub_operation)
+                self.__db_delegate.execute_update(cursor, record_model, c_constraints, sub_operation)
 
                 # relectura.
                 if reread_record:
-                    ret_value = self.read_record(pk_keys, record_model, None, sub_operation)
+                    ret_value = self.read_record(pk_keys, record_model, c_constraints, sub_operation)
 
         except Exception as ex:
             sql = self.__db_delegate.get_update_record_query(record_model, sub_operation)
@@ -481,10 +529,9 @@ class DatabasePersistence(PersistenceOperations):
         except Exception as ex:
             logging.debug(
                 "Error starting transaction fetching records , exception message {} ".format(str(ex)))
-            err_value =  PersistenceErrors.DB_ERR_SERVERNOTFOUND
+            err_value = PersistenceErrors.DB_ERR_SERVERNOTFOUND
 
-        answers = []
-        description = None
+        answers = None
 
         try:
             # Open the transaction
@@ -508,10 +555,10 @@ class DatabasePersistence(PersistenceOperations):
                 if hasattr(cursor, 'stored_results'):
                     for result in cursor.stored_results():
                         answers = result.fetchall()
-                        answers.insert(0,result.description)
+                        answers.insert(0, result.description)
 
                 # Si no hay respuestas encontradas pasamos al metodo normal.
-                if not answers or len(answers) == 0:
+                if answers is None:
                     answers = cursor.fetchall()
                     answers.insert(0, cursor.description)
 
@@ -541,7 +588,7 @@ class DatabasePersistence(PersistenceOperations):
                                 answers.append(model)
 
                 # No hay respuestas , procedemos por el metodo standard.
-                if len(answers) == 0 and not columns:
+                if answers is None and columns is None:
                     if encodetype:
                         columns = [i[0].encode(encodetype).rstrip('\x00') for i in cursor.description]
                     else:
@@ -555,6 +602,8 @@ class DatabasePersistence(PersistenceOperations):
                             # Colocamos la respuesta en el modelo, y lo agregamos a las respuestas
                             model = record_type_classname()
                             model.set_values(dict(zip(columns, row)))
+                            if answers is None:
+                                answers = []
                             answers.append(model)
 
             return answers
@@ -562,9 +611,9 @@ class DatabasePersistence(PersistenceOperations):
         except Exception as ex:
             sql = self.__db_delegate.get_fetch_records_query(c_constraints, sub_operation)
             logging.debug(
-                    "Error reading records , exception message {} , sql ='{}'".format(str(ex), sql))
+                "Error reading records , exception message {} , sql ='{}'".format(str(ex), sql))
 
-            if isinstance(ex,PersistenceException):
+            if isinstance(ex, PersistenceException):
                 err_value = ex.persistent_error
             else:
                 err_value = PersistenceErrors.DB_ERR_CANTEXECUTE
