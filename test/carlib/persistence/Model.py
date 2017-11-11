@@ -3,7 +3,7 @@ from abc import ABCMeta, abstractmethod
 from carlib.utils import cls_locked_attrs
 
 
-@cls_locked_attrs
+#@cls_locked_attrs
 class Model(object):
     """
     Clase base para todos los modelos.
