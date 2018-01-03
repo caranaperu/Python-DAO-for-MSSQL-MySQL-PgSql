@@ -267,44 +267,49 @@ def generate_sql_statement(driver_id, sql_string, c_constraints, remove_unused=F
 
     """
     if c_constraints:
-        for i, (field, operator) in enumerate(c_constraints.filter_fields.items()):
-            find_patterns = ("$f_" + field, "$f_" + str(i), "$ff_" + field, "$ff_" + str(i), "$fv_" + field)
+        if c_constraints.filter_fields:
+            for i, (field, operator) in enumerate(c_constraints.filter_fields.items()):
+                find_patterns = ("$f_" + field, "$f_" + str(i), "$ff_" + field, "$ff_" + str(i), "$fv_" + field)
 
-            field_value = c_constraints.get_filter_field_value(field)
-            for j, to_find in enumerate(find_patterns):
-                if j < 2:
-                    if (operator == Constraints.FilterType.PARTIAL or
-                                operator == Constraints.FilterType.IPARTIAL):
-                        sql_string = sql_string.replace(to_find, field + " " +
-                                                        get_filter_operator(driver_id, operator) + " '%" + str(
-                            field_value) + "%'")
-                    elif isinstance(field_value, str):
-                        sql_string = sql_string.replace(to_find, field + " " +
-                                                        get_filter_operator(driver_id,
-                                                                            operator) + " '" + field_value + "'")
-                    elif isinstance(field_value, bool):
-                        sql_string = sql_string.replace(to_find, field + " " +
-                                                        get_filter_operator(driver_id, operator) + " " + get_as_bool(
-                            driver_id, field_value))
-                    elif field_value is None:
-                        if operator == Constraints.FilterType.EQUAL:
-                            sql_string = sql_string.replace(to_find, field + " is null")
+                field_value = c_constraints.get_filter_field_value(field)
+                for j, to_find in enumerate(find_patterns):
+                    if j < 2:
+                        if (operator == Constraints.FilterType.PARTIAL or
+                                    operator == Constraints.FilterType.IPARTIAL):
+                            sql_string = sql_string.replace(to_find, field + " " +
+                                                            get_filter_operator(driver_id, operator) + " '%" + str(
+                                field_value) + "%'")
+                        elif isinstance(field_value, str):
+                            sql_string = sql_string.replace(to_find, field + " " +
+                                                            get_filter_operator(driver_id,
+                                                                                operator) + " '" + field_value + "'")
+                        elif isinstance(field_value, bool):
+                            sql_string = sql_string.replace(to_find, field + " " +
+                                                            get_filter_operator(driver_id, operator) + " " + get_as_bool(
+                                driver_id, field_value))
+                        elif field_value is None:
+                            if operator == Constraints.FilterType.EQUAL:
+                                sql_string = sql_string.replace(to_find, field + " is null")
+                            else:
+                                sql_string = sql_string.replace(to_find, field + " is not null")
                         else:
-                            sql_string = sql_string.replace(to_find, field + " is not null")
+                            sql_string = sql_string.replace(to_find, field + " " +
+                                                            get_filter_operator(driver_id, operator) + " " + str(
+                                field_value))
+                    elif j < 4:
+                        sql_string = sql_string.replace(to_find, field)
                     else:
-                        sql_string = sql_string.replace(to_find, field + " " +
-                                                        get_filter_operator(driver_id, operator) + " " + str(
-                            field_value))
-                elif j < 4:
-                    sql_string = sql_string.replace(to_find, field)
-                else:
-                    sql_string = sql_string.replace(to_find, str(field_value))
+                        sql_string = sql_string.replace(to_find, str(field_value))
 
         # busqueda de campos para order by
-        for i, (field, direction) in enumerate(c_constraints.sort_fields.items()):
-            to_find = "$o" + str(i)
-            if sql_string.find(to_find) >= 0:
-                sql_string = sql_string.replace(to_find, field + " " + str(direction))
+        if c_constraints.sort_fields:
+            for i, (field, direction) in enumerate(c_constraints.sort_fields.items()):
+                to_find = "$o" + str(i)
+                if sql_string.find(to_find) >= 0:
+                    sql_string = sql_string.replace(to_find, field + " " + str(direction))
+        else:
+            if driver_id in ('mssql', 'mssqlpypy', 'mssqlpy') and sql_string.find("FETCH NEXT") >=0:
+                sql_string = sql_string.replace("ORDER BY", "ORDER BY(SELECT NULL)")
 
         # limits
         if c_constraints.limit:
@@ -329,6 +334,7 @@ def generate_sql_statement(driver_id, sql_string, c_constraints, remove_unused=F
             findings.add(m.group(0))
 
         for finding in findings:
+            sql_string = sql_string.replace(","+finding, "")
             sql_string = sql_string.replace(finding, "")
     return sql_string
 

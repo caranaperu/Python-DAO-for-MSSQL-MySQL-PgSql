@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from enum import Enum
 from copy import deepcopy
 
@@ -177,9 +179,9 @@ class Constraints(object):
         """
         # Si no existe creado el diccionario __sort_fields se crea.
         if self.__sort_fields is None:
-            self.__sort_fields = {}
+            self.__sort_fields = OrderedDict()
 
-        if sort_field is not None and type(sort_field).__name__ == "str":
+        if sort_field is not None and (type(sort_field).__name__ == "str" or type(sort_field).__name__ == "unicode"):
             if type(sort_direction).__name__ == "SortType":
                 self.__sort_fields[sort_field] = sort_direction.value
             else:
@@ -188,6 +190,17 @@ class Constraints(object):
         else:
             raise TypeError(
                 'The sort field ({0}) is not a string'.format(sort_field))
+
+    def clear_sort_fields(self):
+        """
+        Limpia la lista de sort fields.
+
+        Returns
+        -------
+        None
+
+        """
+        self.__sort_fields = None
 
     def del_sort_field(self, sort_key_name):
         """
@@ -203,8 +216,27 @@ class Constraints(object):
         None
 
         """
-        if self.__sort_fields.get(sort_key_name) is not None:
+        if self.sort_field_exists(sort_key_name) is False:
             del self.__sort_fields[sort_key_name]
+
+    def sort_field_exists(self, sort_key_name):
+        """
+        Indica si un sort field existe.
+
+        Parameters
+        ----------
+        sort_key_name: str
+            Nombre del campo de sort a buscar.
+
+        Returns
+        -------
+        bool
+            True si existe , False de lo contrario
+
+        """
+        if self.__sort_fields and self.__sort_fields.get(sort_key_name) is not None:
+            return True
+        return False
 
     @property
     def filter_fields(self):
