@@ -90,7 +90,7 @@ except Exception as e:
     print("Error leyendo "+e.strerror)
 finally:
     print ('Cerrando')
-    if handle != None:
+    if handle is not None:
         handle.close()
 
 print("\n\n")
@@ -159,9 +159,8 @@ d1 ={
 }
 
 print()
-d1={}
-d1['test1'] = {'value':1234,'operator':'and', 'call_order': 0}
-d1['test2'] = {'value':1235,'operator':'or', 'call_order': 1}
+d1= {'test1': {'value': 1234, 'operator': 'and', 'call_order': 0},
+     'test2': {'value': 1235, 'operator': 'or', 'call_order': 1}}
 
 print(d1['test1']['value'])
 print(d1['test2']['value'])

@@ -83,8 +83,8 @@ if unique_id_test:
                 model.nondup = 'IsDuplicate11'
     model.anytext = 'test_2'
 
-    trx = TransactionManager(driver, {'dsn': 'MSSQLServer', 'host': '192.168.0.6', 'port': '1433',
-                                      'user': 'sa', 'password': 'melivane', 'database': 'db_pytest'})
+    trx = TransactionManager(driver, {'dsn': 'MSSQLServer', 'host': '192.168.0.2', 'port': '1433',
+                                      'user': 'sa', 'password': 'Melivane100', 'database': 'db_pytest'})
 
     if query_type_test == QueryType.DIRECT_CALL:
 
@@ -241,8 +241,8 @@ else:
     model.anytext = 'Soy 0008'
 
     daoDelegate = DAODelegateTest()
-    trx = TransactionManager(driver, {'dsn': 'MSSQLServer', 'host': '192.168.0.6', 'port': '1433',
-                                      'user': 'sa', 'password': 'melivane', 'database': 'db_pytest'})
+    trx = TransactionManager(driver, {'dsn': 'MSSQLServer', 'host': '192.168.0.5', 'port': '1433',
+                                      'user': 'sa', 'password': 'Melivane100', 'database': 'db_pytest'})
     dao = DatabasePersistence(trx, daoDelegate)
 
     # usamos la transacion para informar que el control es extrerno.

@@ -73,7 +73,7 @@ if unique_id_test:
                 model.nondup = 'IsDuplicate25'
     model.anytext = 'test'
 
-    trx = TransactionManager(driver, {'host': '192.168.0.5', 'port': '5432', 'user': 'postgres', 'password': 'melivane',
+    trx = TransactionManager(driver, {'host': '192.168.0.2', 'port': '5432', 'user': 'postgres', 'password': 'melivane',
                                       'database': 'db_pytest'})
 
     if query_type_test == QueryType.DIRECT_CALL:
@@ -264,7 +264,7 @@ else:
     model.anytext = 'Soy 0010'
 
     daoDelegate = DAODelegateTest()
-    trx = TransactionManager(driver, {'host': '192.168.0.5', 'port': '5432', 'user': 'postgres', 'password': 'melivane',
+    trx = TransactionManager(driver, {'host': '192.168.0.2', 'port': '5432', 'user': 'postgres', 'password': 'melivane',
                                       'database': 'db_pytest'})
     dao = DatabasePersistence(trx, daoDelegate)
 

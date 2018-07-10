@@ -1,3 +1,4 @@
+from __future__ import print_function
 import time
 import wx
 import wx.grid as  gridlib
@@ -42,7 +43,7 @@ class HugeTable(gridlib.PyGridTableBase):
         gridlib.PyGridTableBase.__init__(self)
 
         self.constraint = Constraints()
-        self.dao = self.init_db();
+        self.dao = self.init_db()
         self.records = None
 
         # self.topRow = 0
@@ -57,9 +58,10 @@ class HugeTable(gridlib.PyGridTableBase):
         self.even = gridlib.GridCellAttr()
         self.even.SetBackgroundColour("sea green")
 
-    def init_db(self):
-        trx = TransactionManager('mssql', {'dsn': 'MSSQLServer', 'host': '192.168.0.7', 'port': '1433',
-                                           'user': 'sa', 'password': 'melivane', 'database': 'veritrade'})
+    @staticmethod
+    def init_db():
+        trx = TransactionManager('mssql', {'dsn': 'MSSQLServer', 'host': '192.168.0.2', 'port': '1433',
+                                           'user': 'sa', 'password': 'Melivane100', 'database': 'veritrade'})
 
         daoDelegate = DAODelegateTest()
         return DatabasePersistence(trx, daoDelegate)
@@ -230,7 +232,7 @@ class HugeTable(gridlib.PyGridTableBase):
 
 class HugeTableGrid(gridlib.Grid):
     def __init__(self, parent, log):
-        visibleRows = None
+        #visibleRows = None
         gridlib.Grid.__init__(self, parent, -1)
 
         memb = mem_profile.memory_usage_psutil()
@@ -259,8 +261,8 @@ class HugeTableGrid(gridlib.Grid):
         self.tableBase.UpdateValues(self)
 
     def OnRightDown(self, event):
-        print "hello"
-        print self.GetSelectedRows()
+        print("hello")
+        print(self.GetSelectedRows())
 
 
 # ---------------------------------------------------------------------------
@@ -268,7 +270,7 @@ class HugeTableGrid(gridlib.Grid):
 class TestFrame(wx.Frame):
     def __init__(self, parent, log):
         wx.Frame.__init__(self, parent, -1, "Huge (virtual) Table Demo", size=(640, 480))
-        grid = HugeTableGrid(self, log)
+        #grid = HugeTableGrid(self, log)
 
         # grid.SetReadOnly(5, 5, True)
 

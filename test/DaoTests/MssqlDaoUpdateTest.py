@@ -31,8 +31,8 @@ class MainTableModel(Model):
 
 
 driver = 'mssql'
-trx = TransactionManager(driver, {'dsn': 'MSSQLServer', 'host': '192.168.0.6', 'port': '1433',
-                                  'user': 'sa', 'password': 'melivane', 'database': 'db_pytest'})
+trx = TransactionManager(driver, {'dsn': 'MSSQLServer', 'host': '192.168.0.2', 'port': '1433',
+                                  'user': 'sa', 'password': 'Melivane100', 'database': 'db_pytest'})
 
 
 class DAODelegateTest(MsSQLBaseDelegate):

@@ -181,7 +181,8 @@ class Constraints(object):
         if self.__sort_fields is None:
             self.__sort_fields = OrderedDict()
 
-        if sort_field is not None and (type(sort_field).__name__ == "str" or type(sort_field).__name__ == "unicode"):
+        # if sort_field is not None and (type(sort_field).__name__ == "str" or type(sort_field).__name__ == "unicode"):
+        if sort_field is not None and type(sort_field).__name__ == "str":
             if type(sort_direction).__name__ == "SortType":
                 self.__sort_fields[sort_field] = sort_direction.value
             else:

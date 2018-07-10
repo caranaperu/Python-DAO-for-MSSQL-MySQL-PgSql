@@ -72,7 +72,7 @@ class BufferedDataSource(object):
         # print ('Memory (Before): {}Mb'.format(memb))
         # t1 = time.clock()
 
-        offset = (self.__bufferSize / 2) * (row // (self.__bufferSize / 2) - 1)
+        offset = int((self.__bufferSize / 2) * (row // (self.__bufferSize / 2) - 1))
         if offset < 0:
             offset = 0
         self.__offset = offset
@@ -121,7 +121,7 @@ class BufferedDataSource(object):
         print("Status = ",orderColumn,sortedColDescending)
         newDirection = Constraints.SortType.DESC if sortedColDescending else Constraints.SortType.ASC
 
-        if self.constraints.sort_field_exists(orderColumn) == False:
+        if self.constraints.sort_field_exists(orderColumn) is False:
             self.constraints.add_sort_field(orderColumn, newDirection )
             return True
         elif self.constraints.sort_fields[orderColumn] != newDirection:

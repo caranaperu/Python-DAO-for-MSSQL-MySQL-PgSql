@@ -50,7 +50,7 @@ class DAODelegateTest(MySQLBaseDelegate):
         return sql
 
 
-trx = TransactionManager('mysql', {'host': 'localhost', 'port': '3306',
+trx = TransactionManager('mysql', {'host': '192.168.0.2', 'port': '3306',
                                    'user': 'root', 'password': 'melivane', 'database': 'py_dbtest'})
 
 daoDelegate = DAODelegateTest()

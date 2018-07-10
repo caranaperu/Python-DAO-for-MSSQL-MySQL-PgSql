@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 """
 UnicodeHexDump.py
 
@@ -57,13 +59,13 @@ def writeFile(path, uniText, encoding, errors="replace"):
 def test():
     TEST =  u'\u6b70\u695fd'
 
-    print dump("ascii     " + TEST.encode("ascii", "replace"))
-    print dump("Latin-1   " + TEST.encode("Latin-1", "replace"))
-    print dump("utf8      " + TEST.encode("utf8", "replace"))
-    print dump("utf16     " + TEST.encode("utf16", "replace"))
-    print dump("utf-16-be " + TEST.encode("utf-16-be", "replace"))
-    print dump("utf-16-le " + TEST.encode("utf-16-le", "replace"))
-    print dump("unicode   " + TEST)
+    print(dump("ascii     " + TEST.encode("ascii", "replace")))
+    print(dump("Latin-1   " + TEST.encode("Latin-1", "replace")))
+    print(dump("utf8      " + TEST.encode("utf8", "replace")))
+    print(dump("utf16     " + TEST.encode("utf16", "replace")))
+    print(dump("utf-16-be " + TEST.encode("utf-16-be", "replace")))
+    print(dump("utf-16-le " + TEST.encode("utf-16-le", "replace")))
+    print(dump("unicode   " + TEST))
 
     DELETE_ME_TXT = "deleteme.txt"
     writeFile(DELETE_ME_TXT, TEST, "utf8")

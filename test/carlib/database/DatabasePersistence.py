@@ -1,7 +1,7 @@
 import logging
 from copy import deepcopy
 
-from TransactionManager import TransactionManager
+from carlib.database.TransactionManager import TransactionManager
 from carlib.database.DatabaseDelegate import DatabaseDelegate
 from carlib.persistence.Model import Model
 from carlib.persistence.PersistenceErrors import PersistenceErrors
@@ -617,7 +617,7 @@ class DatabasePersistence(PersistenceOperations):
                 err_value = ex.persistent_error
             else:
                 err_value = PersistenceErrors.DB_ERR_CANTEXECUTE
-            raise
+            raise Exception() from ex
         finally:
             # Si no es un error terminal cerramos normalmente de lo contrario indicamos
             # que existe un error lo cual causara que se cierre la transaccion y se hara un rollback

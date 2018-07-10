@@ -65,8 +65,8 @@ class DAODelegateTest(MsSQLBaseDelegate):
         return sql
 
 
-trx = TransactionManager(driver, {'dsn': 'MSSQLServer', 'host': '192.168.0.6', 'port': '1433',
-                                  'user': 'sa', 'password': 'melivane', 'database': 'veritrade'})
+trx = TransactionManager(driver, {'dsn': 'LINUX_MSSQLSERVER', 'host': '192.168.0.2', 'port': '1433',
+                                  'user': 'sa', 'password': 'Melivane100', 'database': 'veritrade'})
 
 daoDelegate = DAODelegateTest()
 dao = DatabasePersistence(trx, daoDelegate)
@@ -79,8 +79,8 @@ constraint = Constraints()
 constraint.offset = 100
 constraint.limit = 20000
 
-constraint.add_filter_field('importador', 'NISSAN', Constraints.FilterType.IPARTIAL)
-constraint.add_filter_field('marca', 'NISSAN', Constraints.FilterType.EQUAL)
+constraint.add_filter_field('importador', 'DERCO', Constraints.FilterType.IPARTIAL)
+constraint.add_filter_field('marca', 'MAZDA', Constraints.FilterType.EQUAL)
 # Sort
 constraint.add_sort_field('pais_embarque', Constraints.SortType.ASC)
 
@@ -96,8 +96,8 @@ print ('Took {} Seconds'.format(t2 - t1))
 
 print(len(rows))
 
-# for row in rows:
-#    print(row)
+for row in rows:
+    print(row)
 
 if isinstance(rows[0], MainTableModel):
     print(rows[0].__dict__)

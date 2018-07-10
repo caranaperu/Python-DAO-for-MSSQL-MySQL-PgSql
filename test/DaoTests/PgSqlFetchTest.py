@@ -51,7 +51,7 @@ class DAODelegateTest(PgSQLBaseDelegate):
         return sql
 
 
-trx = TransactionManager('pgsql', {'host': '192.168.0.5', 'port': '5432', 'user': 'postgres', 'password': 'melivane',
+trx = TransactionManager('pgsql', {'host': '192.168.0.2', 'port': '5432', 'user': 'postgres', 'password': 'melivane',
                                    'database': 'xendra'})
 
 daoDelegate = DAODelegateTest()

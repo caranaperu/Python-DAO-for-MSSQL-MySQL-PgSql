@@ -18,7 +18,7 @@ test = 'normal'
 calltest = True
 
 driver = 'pgsql'
-trx = TransactionManager(driver, {'host': '192.168.0.5', 'port': '5432', 'user': 'postgres', 'password': 'melivane',
+trx = TransactionManager(driver, {'host': '192.168.0.2', 'port': '5432', 'user': 'postgres', 'password': 'melivane',
                                   'database': 'db_pytest'})
 
 

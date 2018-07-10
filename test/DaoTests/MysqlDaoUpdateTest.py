@@ -32,10 +32,10 @@ class MainTableModel(Model):
 
 
 driver = 'mysql'
-calltest = True
-read_calltest = True
+calltest = False
+read_calltest = False
 
-trx = TransactionManager(driver, {'host': 'localhost', 'port': '3306',
+trx = TransactionManager(driver, {'host': '192.168.0.2', 'port': '3306',
                                   'user': 'root', 'password': 'melivane', 'database': 'py_dbtest'})
 
 

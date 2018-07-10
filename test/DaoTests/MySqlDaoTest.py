@@ -60,7 +60,7 @@ unique_id_test = True
 driver = 'mysql'
 
 if unique_id_test:
-    query_type_test = QueryType.SP_WITH_OUTPUT_ID
+    query_type_test = QueryType.DIRECT_CALL
     fl_reread = True
     withFK = False
     verify_dup = False
@@ -75,10 +75,10 @@ if unique_id_test:
             model.fktest = 1  # 1 - es ok , 2- genera error de foreign key
             model.nondup = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
             if verify_dup:
-                model.nondup = 'IsDuplicate23'
-    model.anytext = 'test23'
+                model.nondup = 'IsDuplicate24'
+    model.anytext = 'test2333'
 
-    trx = TransactionManager(driver, {'host': 'localhost', 'port': '3306',
+    trx = TransactionManager(driver, {'host': '192.168.0.2', 'port': '3306',
                                       'user': 'root', 'password': 'melivane', 'database': 'py_dbtest'})
 
     if query_type_test == QueryType.DIRECT_CALL:
@@ -278,12 +278,12 @@ else:
 
 
     model = MainTableModel()
-    model.main_code = '008'
-    model.main_number = 8
-    model.anytext = 'Soy 0007'
+    model.main_code = '101'
+    model.main_number = 120
+    model.anytext = 'Soy aaaa'
 
     daoDelegate = DAODelegateTest()
-    trx = TransactionManager(driver, {'host': 'localhost', 'port': '3306',
+    trx = TransactionManager(driver, {'host': '192.168.0.2', 'port': '3306',
                                       'user': 'root', 'password': 'melivane', 'database': 'py_dbtest'})
     dao = DatabasePersistence(trx, daoDelegate)
 

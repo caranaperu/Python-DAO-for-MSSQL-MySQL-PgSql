@@ -1,12 +1,18 @@
-import json
 import wx
 import wx.grid as  gridlib
+import logging
 
 from carlib.database import TransactionManager, DatabasePersistence
 from carlib.database.impl import MsSQLBaseDelegate
 from carlib.persistence import Model
 from carlib.utils import generate_sql_statement
 from carlib.virtualgrid import BufferedDataSource
+
+logging.basicConfig(
+    filename="test.log",
+    level=logging.DEBUG,
+    format="%(asctime)s:%(levelname)s:%(message)s"
+)
 
 test = "millions"
 
@@ -46,11 +52,13 @@ class DAODelegateTest(MsSQLBaseDelegate):
                 sql = "SELECT  count(*) FROM tb_carroceria "
             else:
                 sql = "SELECT  f_carroceria,f_carroceriatext FROM tb_carroceria "  # where f_carroceriatext='CISTERNA'"
-                sql = sql + "ORDER BY f_carroceria  "
+                sql = sql + "ORDER BY $o0,$o1   "
                 sql = sql + "OFFSET " + str(c_constraints.offset) + " ROWS "
                 sql = sql + "FETCH NEXT " + str(c_constraints.limit) + " ROWS ONLY"
 
-        print (sql)
+                sql = generate_sql_statement(self.driver_id, sql, c_constraints, remove_unused=True)
+
+        print(sql)
         return sql
 
 
@@ -73,6 +81,7 @@ class BufferedDataSourceImpl(BufferedDataSource):
 
     def fetchRecordsToBuffer(self, constraints):
         wait = wx.BusyCursor()
+        print("Paso fetchRecords")
         records = self.__dao.fetch_records(constraints, raw_answers=True)
         del wait
         del records[0]
@@ -115,8 +124,9 @@ class VirtualTable(gridlib.PyGridTableBase):
         record = self.__bufferedDataSource.getRow(row)
         if record is not None:
             try:
-                if type(record[col]) == str or type(record[col]) == unicode:
-                    return record[col]
+                #if type(record[col]) == str or type(record[col]) == unicode:
+                if type(record[col]) == str:
+                        return record[col]
                 else:
                     return str(record[col])
             except UnicodeEncodeError as ex:
@@ -131,6 +141,7 @@ class VirtualTable(gridlib.PyGridTableBase):
     def DeleteRows(self, pos=0, numRows=1):
         print("Eliminando")
         return True
+
 
 # ---------------------------------------------------------------------------
 
@@ -168,7 +179,7 @@ class VirtualGrid(gridlib.Grid):
             for i in range(len(self.__setupData["order_fields"])):
                 self.__order_field_pos.append(self.__setupData["order_fields"][i]["field"])
                 self.__bufferedDataSource.setOrderField(self.__setupData["order_fields"][i]["field"],
-                                                     self.__setupData["order_fields"][i]["desc"])
+                                                        self.__setupData["order_fields"][i]["desc"])
 
     def OnColumnHeaderPaint(self, evt):
         w = self.GetGridColLabelWindow()
@@ -179,45 +190,44 @@ class VirtualGrid(gridlib.Grid):
         for col in range(self.GetNumberCols()):
             self.drawColumnHeader(col, dc)
 
-
     def OnGridLabelLeftClick(self, evt):
         self.processSort(evt.GetCol())
 
     def processSort(self, gridCol=None):
-        if gridCol == None:
+        if gridCol is None:
             gridCol = self.GetGridCursorCol()
 
         col_id = self.__setupData["columns"][gridCol]["map"]
-        order_field = next((item for item in self.__setupData["order_fields"] if item.get("field") and item["field"] == col_id), None)
+        order_field = next(
+            (item for item in self.__setupData["order_fields"] if item.get("field") and item["field"] == col_id), None)
 
         print(order_field)
         descending = False
         if order_field:
-            if order_field["desc"] == False:
+            if not order_field["desc"]:
                 descending = True
-            elif order_field["desc"] == True:
+            elif order_field["desc"]:
                 descending = None
             else:
                 descending = False
             order_field["desc"] = descending
         else:
-            self.__setupData["order_fields"].append({"field":col_id,"desc": False})
+            self.__setupData["order_fields"].append({"field": col_id, "desc": False})
             self.__order_field_pos.append(col_id)
-            print("==========>",self.__setupData["order_fields"])
+            print("==========>", self.__setupData["order_fields"])
 
-
-        if order_field and descending == None:
+        if order_field and descending is None:
             # update local order variables.
             self.__setupData["order_fields"].remove(order_field)
             self.__order_field_pos.remove(order_field["field"])
             self.__bufferedDataSource.clearOrderFields()
             for i in range(len(self.__setupData["order_fields"])):
                 self.__bufferedDataSource.setOrderField(self.__setupData["order_fields"][i]["field"],
-                                                     self.__setupData["order_fields"][i]["desc"])
+                                                        self.__setupData["order_fields"][i]["desc"])
         else:
-            self.__bufferedDataSource.setOrderField(col_id,descending)
+            self.__bufferedDataSource.setOrderField(col_id, descending)
 
-        #paint
+        # paint
         self.MakeCellVisible(0, 0)
         self.SetGridCursor(0, 0)
 
@@ -237,14 +247,15 @@ class VirtualGrid(gridlib.Grid):
         dc.SetTextForeground(wx.BLACK)
         colSize = self.GetColSize(column)
         rect = (totColSize, 0, colSize, 32)
-        print("Recvtangulo=",rect)
-        dc.DrawRectangle(rect[0] - (column <> 0 and 1 or 0), rect[1],
-                         rect[2] + (column <> 0 and 1 or 0), rect[3])
+        print("Recvtangulo=", rect)
+        dc.DrawRectangle(rect[0] - (column != 0 and 1 or 0), rect[1],
+                         rect[2] + (column != 0 and 1 or 0), rect[3])
 
-        print("pintado ",column)
+        print("pintado ", column)
         col = self.__setupData["columns"][column]["map"]
-        order_field = next((item for item in self.__setupData["order_fields"] if item.get("field") and item["field"] == col), None)
-        print("pintado ",column,col,order_field)
+        order_field = next(
+            (item for item in self.__setupData["order_fields"] if item.get("field") and item["field"] == col), None)
+        print("pintado ", column, col, order_field)
 
         if order_field:
             font.SetWeight(wx.BOLD)
@@ -253,13 +264,13 @@ class VirtualGrid(gridlib.Grid):
             left = rect[0] + 3
             top = rect[1] + 3
             dc.SetBrush(wx.Brush("WHEAT", wx.BRUSHSTYLE_SOLID))
-            if order_field["desc"] == False:
+            if not order_field["desc"]:
                 dc.DrawPolygon([(left, top), (left + 6, top), (left + 3, top + 4)])
             else:
                 dc.DrawPolygon([(left + 3, top), (left + 6, top + 4), (left, top + 4)])
 
-            order_pos = self.__setupData["order_fields"].index(order_field)+1
-            dc.DrawText(str(order_pos),rect[0]+rect[2]-dc.GetFullTextExtent(str(order_pos))[0]-3,top)
+            order_pos = self.__setupData["order_fields"].index(order_field) + 1
+            dc.DrawText(str(order_pos), rect[0] + rect[2] - dc.GetFullTextExtent(str(order_pos))[0] - 3, top)
         else:
             font.SetWeight(wx.NORMAL)
 
@@ -305,7 +316,7 @@ class TestFrame(wx.Frame):
         if test == "millions":
             steps = 500
         bufferedDataSource = BufferedDataSourceImpl('mssql',
-                                                    {'dsn': 'MSSQLServer', 'host': '192.168.0.5', 'port': '1433',
+                                                    {'dsn': 'MSSQLServer', 'host': '192.168.0.2', 'port': '1433',
                                                      'user': 'sa', 'password': 'Melivane100',
                                                      'database': 'veritrade'}, steps)
 
@@ -317,10 +328,10 @@ class TestFrame(wx.Frame):
                 "CHASSISDATA": {"type": "str"}
             },
             "columns": [
-                {"colname":"Marca","map":"marca"},
-                {"colname":"Modelo","map":"modelo"},
-                {"colname":"Version","map":"version"},
-                {"colname":"VIN","map":"CHASSISDATA"}
+                {"colname": "Marca", "map": "marca"},
+                {"colname": "Modelo", "map": "modelo"},
+                {"colname": "Version", "map": "version"},
+                {"colname": "VIN", "map": "CHASSISDATA"}
             ],
             "order_fields": [
                 {
@@ -333,16 +344,35 @@ class TestFrame(wx.Frame):
                 }
             ]
         }
-        order_Fields_pos = ["field1", "field2"]
 
-        grid = VirtualGrid(self, log, bufferedDataSource, setup_data)
+        setup_data_2 = {
+            "model": {
+                "f_carroceria": {"type": "str"},
+                "f_carroceriatext": {"type": "str"}
+            },
+            "columns": [
+                {"colname": "Carroceria", "map": "f_carroceria"},
+                {"colname": "Descripcion", "map": "f_carroceriatext"}
+            ],
+            "order_fields": [
+                {
+                    "field": "f_carroceria",
+                    "desc": False
+                }
+            ]
+        }
+        #        order_Fields_pos = ["field1", "field2"]
+
+        if test == "millions":
+            grid = VirtualGrid(self, log, bufferedDataSource, setup_data)
+        else:
+            grid = VirtualGrid(self, log, bufferedDataSource, setup_data_2)
 
 
 # ---------------------------------------------------------------------------
 
 if __name__ == '__main__':
     import sys
-    import json
 
     # marca,modelo,version,CHASSISDATA
 

@@ -109,9 +109,9 @@ class MyFrame(wx.Frame):
         event.Skip()
 
     def OnGridLeftClick(self, evt):
-        print "OnCellLeftClick: (%d,%d) %s\n" % (evt.GetRow(),
+        print ("OnCellLeftClick: (%d,%d) %s\n" % (evt.GetRow(),
                                                  evt.GetCol(),
-                                                 evt.GetPosition())
+                                                 evt.GetPosition()))
         evt.Skip()
 
     def init_db(self):

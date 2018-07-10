@@ -43,7 +43,7 @@ if unique_id_test:
     model = MainTableModel()
     model.anytext = 'test33'
 
-    trx = TransactionManager(driver, {'host': '192.168.0.5', 'port': '5432', 'user': 'postgres', 'password': 'melivane',
+    trx = TransactionManager(driver, {'host': '192.168.0.2', 'port': '5432', 'user': 'postgres', 'password': 'melivane',
                                       'database': 'db_pytest'})
 
     if query_type_test == QueryType.DIRECT_SP:
