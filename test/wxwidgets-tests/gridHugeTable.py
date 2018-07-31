@@ -7,7 +7,7 @@ import mem_profile
 from carlib.database import TransactionManager, DatabasePersistence
 from carlib.database.impl import MsSQLBaseDelegate
 from carlib.persistence import Model, Constraints
-from carlib.utils import dbutils
+#from carlib.utils import dbutils
 
 
 class AutosModel(Model):
@@ -257,7 +257,7 @@ class HugeTableGrid(gridlib.Grid):
     def Reset(self):
         """reset the view based on the data in the table.  Call
         this when rows are added or destroyed"""
-        self.tableBase.ResetView(self)
+        self.tableBase.ResetView(self,True)
         self.tableBase.UpdateValues(self)
 
     def OnRightDown(self, event):

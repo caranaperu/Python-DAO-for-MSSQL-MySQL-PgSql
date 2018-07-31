@@ -93,7 +93,7 @@ class BufferedDataSourceImpl(BufferedDataSource):
 class VirtualTable(gridlib.PyGridTableBase):
 
     def __init__(self, log, bufferedDataSource, columns):
-        gridlib.PyGridTableBase.__init__(self)
+        gridlib.GridTableBase.__init__(self)
 
         self.__bufferedDataSource = bufferedDataSource
         self.log = log
@@ -148,9 +148,31 @@ class VirtualTable(gridlib.PyGridTableBase):
 
 class VirtualGrid(gridlib.Grid):
     def __init__(self, parent, log, bufferedDataSource, setupData):
-        gridlib.Grid.__init__(self, parent, -1)
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.panel = wx.Panel(parent, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
+        self.inner_sizer = wx.BoxSizer(wx.VERTICAL)
+
+        gridlib.Grid.__init__(self, self.panel, -1)
+        self.SetMargins(0, 0)
+
 
         self.tableBase = VirtualTable(log, bufferedDataSource, setupData["columns"])
+
+
+        self.inner_sizer.Add(self, 1, wx.ALL | wx.EXPAND, 5)
+
+        self.panel.SetSizer(self.inner_sizer)
+        self.panel.Layout()
+        self.inner_sizer.Fit(self.panel)
+        sizer.Add(self.panel, 1, wx.EXPAND | wx.ALL, 0)
+
+        parent.SetSizer(sizer)
+        parent.Layout()
+
+        #sizer = wx.BoxSizer(wx.VERTICAL)
+        #sizer.Add(parent, -1, wx.EXPAND | wx.ALL)
+        #parent.SetSizer(sizer)
 
         self.__bufferedDataSource = bufferedDataSource
         self.__setupData = setupData
@@ -168,11 +190,17 @@ class VirtualGrid(gridlib.Grid):
         columnLabelWindow = self.GetGridColLabelWindow()
         columnLabelWindow.Bind(wx.EVT_PAINT, self.OnColumnHeaderPaint)
         self.Bind(wx.grid.EVT_GRID_LABEL_LEFT_CLICK, self.OnGridLabelLeftClick)
+        parent.Bind(wx.EVT_SIZE,self.OnWindowSizeChanged)
+
+        # Comienzo de cambio
+        #self.Bind(wx.grid.EVT_GRID_CMD_COL_SIZE, self.OnGridResize)
+        ########################################################################
 
         # The second parameter means that the grid is to take ownership of the
         # table and will destroy it when done.  Otherwise you would need to keep
         # a reference to it and call it's Destroy method later.
         self.SetTable(self.tableBase, True)
+
 
     def initSortOrder(self):
         if self.__setupData["order_fields"]:
@@ -180,6 +208,37 @@ class VirtualGrid(gridlib.Grid):
                 self.__order_field_pos.append(self.__setupData["order_fields"][i]["field"])
                 self.__bufferedDataSource.setOrderField(self.__setupData["order_fields"][i]["field"],
                                                         self.__setupData["order_fields"][i]["desc"])
+
+
+    def OnGridResize(self, evt):
+        print("EVT= ",evt)
+        evt.Skip()
+
+    def OnWindowSizeChanged(self, evt):
+        #print("EVT= ",evt)
+        #size = evt.GetSize()
+
+        #totColSize = -self.GetViewStart()[0] * self.GetScrollPixelsPerUnit()[0]  # Thanks Roger Binns
+        #for col in range(self.GetNumberCols()):
+        #    totColSize += self.GetColSize(col)
+
+        #print("Size= ",size.width)
+        #print("SizeCols= ",totColSize)
+        #evt.Skip()
+
+        width, height = self.GetClientSize()
+        #print("Size de 0= ",self.grid.GetColSize(0))
+        width -= self.GetDefaultRowLabelSize()
+        numcols = self.GetNumberCols()
+        print("PASO ON SIZE =",width,height,numcols)
+        if width >= 100:
+            for col in range(numcols):
+                #self.grid.SetColSize(col, width / (4 + 1))
+                self.SetColSize(col, width / numcols )
+        self.AdjustScrollbars()
+        self.ForceRefresh()
+        evt.Skip()
+
 
     def OnColumnHeaderPaint(self, evt):
         w = self.GetGridColLabelWindow()
@@ -247,15 +306,15 @@ class VirtualGrid(gridlib.Grid):
         dc.SetTextForeground(wx.BLACK)
         colSize = self.GetColSize(column)
         rect = (totColSize, 0, colSize, 32)
-        print("Recvtangulo=", rect)
+      #  print("Recvtangulo=", rect)
         dc.DrawRectangle(rect[0] - (column != 0 and 1 or 0), rect[1],
                          rect[2] + (column != 0 and 1 or 0), rect[3])
 
-        print("pintado ", column)
+       # print("pintado ", column)
         col = self.__setupData["columns"][column]["map"]
         order_field = next(
             (item for item in self.__setupData["order_fields"] if item.get("field") and item["field"] == col), None)
-        print("pintado ", column, col, order_field)
+       # print("pintado ", column, col, order_field)
 
         if order_field:
             font.SetWeight(wx.BOLD)
@@ -365,11 +424,94 @@ class TestFrame(wx.Frame):
 
         if test == "millions":
             grid = VirtualGrid(self, log, bufferedDataSource, setup_data)
+
+            #self.panel = wx.Panel(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
+
+            #grid = VirtualGrid(self.panel, log, bufferedDataSource, setup_data)
+
+            #sizer = wx.BoxSizer(wx.VERTICAL)
+            #sizer.Add(grid)
+            #self.panel.SetSizer(sizer)
+            #self.panel.Layout()
+            #self.SetSizer(sizer)
+
+
         else:
             grid = VirtualGrid(self, log, bufferedDataSource, setup_data_2)
 
+            #self.panel = wx.Panel(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
+
+            #grid = VirtualGrid(self.panel, log, bufferedDataSource, setup_data_2)
+
+            #sizer = wx.BoxSizer(wx.HORIZONTAL)
+            #sizer.Add(grid)
+            #self.panel.SetSizer(sizer)
+            #self.setSizer(sizer)
+
+        #grid.ForceRefresh()
+
 
 # ---------------------------------------------------------------------------
+class Frame(wx.Frame):
+
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"Test", pos=wx.DefaultPosition, size=wx.Size(650, 480),
+                          style=wx.DEFAULT_FRAME_STYLE | wx.RESIZE_BORDER | wx.TAB_TRAVERSAL)
+
+        #self.SetSizeHintsSz(wx.DefaultSize, wx.DefaultSize)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.panel = wx.Panel(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
+        self.inner_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.grid = wx.grid.Grid(self.panel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
+
+        # Grid
+        self.grid.CreateGrid(10, 4)
+        self.grid.EnableEditing(True)
+        self.grid.EnableGridLines(True)
+        self.grid.EnableDragGridSize(False)
+        self.grid.SetMargins(0, 0)
+
+        # Columns
+        self.grid.EnableDragColMove(False)
+        self.grid.EnableDragColSize(True)
+        self.grid.SetColLabelSize(30)
+        self.grid.SetColLabelAlignment(wx.ALIGN_CENTRE, wx.ALIGN_CENTRE)
+
+        # Rows
+        self.grid.EnableDragRowSize(True)
+        self.grid.SetRowLabelSize(80)
+        self.grid.SetRowLabelAlignment(wx.ALIGN_CENTRE, wx.ALIGN_CENTRE)
+
+        # Label Appearance
+
+        # Cell Defaults
+        #self.grid.HideRowLabels()
+        self.grid.SetDefaultCellAlignment(wx.ALIGN_LEFT, wx.ALIGN_TOP)
+        self.inner_sizer.Add(self.grid, 1, wx.ALL | wx.EXPAND, 5)
+
+        self.panel.SetSizer(self.inner_sizer)
+        self.panel.Layout()
+        self.inner_sizer.Fit(self.panel)
+        sizer.Add(self.panel, 1, wx.EXPAND | wx.ALL, 0)
+
+        self.grid.Bind(wx.EVT_SIZE, self.OnSize)
+
+        self.SetSizer(sizer)
+        self.Layout()
+       # self.Centre(wx.BOTH)
+        self.Show()
+
+    def OnSize(self, event):
+        width, height = self.grid.GetClientSize()
+        #print("Size de 0= ",self.grid.GetColSize(0))
+        width -= self.grid.GetDefaultRowLabelSize()
+        ##print("PASO ON SIZE =",width,height)
+        for col in range(4):
+            #self.grid.SetColSize(col, width / (4 + 1))
+            self.grid.SetColSize(col, width / 4 )
+        self.grid.ForceRefresh()
+
+
 
 if __name__ == '__main__':
     import sys
@@ -379,6 +521,10 @@ if __name__ == '__main__':
     app = wx.App()
     frame = TestFrame(None, sys.stdout)
     frame.Show(True)
+    #app.MainLoop()
+
+    frm = Frame(None)
+    frm.Show(True)
     app.MainLoop()
 
 # ---------------------------------------------------------------------------
