@@ -180,8 +180,11 @@ class VirtualGrid(gridlib.Grid):
         self.__order_field_pos = []
         self.initSortOrder()
 
-        self.Bind(wx.EVT_TIMER, self.OnTimeout)
         self.__timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.OnTimeout, self.__timer)
+
+        self.__timerResize = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.OnResizeTimeout, self.__timerResize)
 
         self.Bind(wx.EVT_SCROLLWIN, self.OnScrollGrid)
         self.Bind(wx.EVT_KEY_DOWN, self.OnKeyDown)
@@ -215,28 +218,7 @@ class VirtualGrid(gridlib.Grid):
         evt.Skip()
 
     def OnWindowSizeChanged(self, evt):
-        #print("EVT= ",evt)
-        #size = evt.GetSize()
-
-        #totColSize = -self.GetViewStart()[0] * self.GetScrollPixelsPerUnit()[0]  # Thanks Roger Binns
-        #for col in range(self.GetNumberCols()):
-        #    totColSize += self.GetColSize(col)
-
-        #print("Size= ",size.width)
-        #print("SizeCols= ",totColSize)
-        #evt.Skip()
-
-        width, height = self.GetClientSize()
-        #print("Size de 0= ",self.grid.GetColSize(0))
-        width -= self.GetDefaultRowLabelSize()
-        numcols = self.GetNumberCols()
-        print("PASO ON SIZE =",width,height,numcols)
-        if width >= 100:
-            for col in range(numcols):
-                #self.grid.SetColSize(col, width / (4 + 1))
-                self.SetColSize(col, width / numcols )
-        self.AdjustScrollbars()
-        self.ForceRefresh()
+        self.__timerResize.Start(200, oneShot=wx.TIMER_ONE_SHOT)
         evt.Skip()
 
 
@@ -336,6 +318,22 @@ class VirtualGrid(gridlib.Grid):
         dc.SetFont(font)
         dc.DrawLabel("%s" % self.GetColLabelValue(column),
                      rect, wx.ALIGN_CENTER | wx.ALIGN_TOP)
+
+    def OnResizeTimeout(self, evt):
+        print("Se apago Resize Timeout")
+        width, height = self.GetClientSize()
+        width -= self.GetDefaultRowLabelSize()
+        numcols = self.GetNumberCols()
+        print("PASO ON SIZE =", width, height, numcols)
+
+        self.BeginBatch()
+        if width >= 100:
+            for col in range(numcols):
+                # self.grid.SetColSize(col, width / (4 + 1))
+                self.SetColSize(col, width / numcols)
+            self.AdjustScrollbars()
+            self.ForceRefresh()
+        self.EndBatch()
 
     def OnTimeout(self, evt):
         print("Se apago")
